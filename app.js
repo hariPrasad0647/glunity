@@ -17,8 +17,22 @@ const contentRoutes = require('./modules/content/routes/content.routes');
 
 const app = express();
 
+const allowedOrigins = [
+  'https://happychats.in',
+  'https://www.happychats.in',
+];
+
 app.use(helmet());
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

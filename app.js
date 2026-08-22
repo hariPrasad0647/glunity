@@ -1,5 +1,5 @@
-require('dotenv').config();
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -17,8 +17,22 @@ const contentRoutes = require('./modules/content/routes/content.routes');
 
 const app = express();
 
+const allowedOrigins = [
+  'https://happychats.in',
+  'https://www.happychats.in',
+];
+
 app.use(helmet());
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

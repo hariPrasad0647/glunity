@@ -13,6 +13,9 @@ const uploadToBunny = async (buffer, remotePath) => {
   });
 
   if (!res.ok) {
+    if (res.status === 405) {
+      throw new Error(`Bunny CDN upload failed: 405 Method Not Allowed. This is usually caused by using the wrong region endpoint in BUNNY_STORAGE_ENDPOINT (e.g. storage.bunnycdn.com instead of sg.storage.bunnycdn.com) or hitting the Pull Zone URL by mistake.`);
+    }
     throw new Error(`Bunny CDN upload failed: ${res.status} ${res.statusText}`);
   }
 

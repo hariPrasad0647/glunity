@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 
 const errorHandler = require('./middleware/errorHandler');
+const { apiLimiter } = require('./middleware/rateLimiter');
 const authRoutes = require('./modules/auth/routes/auth.routes');
 const userRoutes = require('./modules/user/routes/user.routes');
 const postRoutes = require('./modules/post/routes/post.routes');
@@ -40,6 +41,8 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+app.use('/api/', apiLimiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

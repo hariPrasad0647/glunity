@@ -9,9 +9,7 @@ const Hashtag = require('../../post/models/hashtag.model');
 const Reel = require('../../reel/models/reel.model');
 const ReelMention = require('../../reel/models/reel_mention.model');
 const Like = require('../../post/models/like.model');
-const Save = require('../../post/models/bookmark.model');
-const Share = require('../../post/models/share.model');
-const Comment = require('../../comment/models/comment.model');
+const Bookmark = require('../../post/models/bookmark.model');
 
 // Ensure hashtag join-table associations are registered
 require('../../post/models/post_hashtag.model');
@@ -21,16 +19,12 @@ const LOOKBACK_DAYS = 14;
 const FETCH_MULTIPLIER = 5;
 
 // ── Scoring ────────────────────────────────────────────────────────────────────
-// Saves signal stronger intent than likes, so they're weighted 2×.
-// timeFactor uses a gentle power decay so good content survives a few days.
-// Content from followed accounts gets a 2× relationship bonus.
-const computeScore = ({ createdAt, likeCount, saveCount, shareCount, interestMatch, isFollowing }) => {
+const computeScore = ({ createdAt, likeCount, bookmarkCount, repostCount, interestMatch, isFollowing }) => {
   const hoursOld = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60);
   const timeFactor = 1 / Math.pow(hoursOld + 2, 1.2);
-  const engagement = likeCount + saveCount * 2 + shareCount * 1.5;
+  const engagement = likeCount + bookmarkCount * 2 + repostCount * 1.5;
   const interestBonus = interestMatch ? 1.5 : 1.0;
   const relationshipBonus = isFollowing ? 2.0 : 1.0;
-  // Baseline ensures fresh content with zero engagement still surfaces
   return (engagement * interestBonus + 0.1) * timeFactor * relationshipBonus;
 };
 
@@ -68,7 +62,6 @@ const getFeed = async (userId, { page = 1, limit = 20 } = {}) => {
 
   const baseWhere = { createdAt: { [Op.gte]: since }, isPrivate: false };
 
-  // ── Primary: content from followed accounts ──────────────────────────────────
   let posts = [], reels = [];
   if (followingIds.length > 0) {
     [posts, reels] = await Promise.all([
@@ -77,7 +70,6 @@ const getFeed = async (userId, { page = 1, limit = 20 } = {}) => {
     ]);
   }
 
-  // ── Supplemental: fill gaps with trending public content ──────────────────────
   let suggestedPosts = [], suggestedReels = [];
   if (posts.length + reels.length < limit) {
     const excludeIds = followingIds.length ? [...followingIds, userId] : [userId];
@@ -91,41 +83,24 @@ const getFeed = async (userId, { page = 1, limit = 20 } = {}) => {
   const allReels = [...reels, ...suggestedReels];
   if (allPosts.length === 0 && allReels.length === 0) return { feed: [], page, limit, hasMore: false };
 
-  // ── Batch engagement counts ───────────────────────────────────────────────────
-  const postIds = allPosts.map((p) => p.id);
-  const reelIds = allReels.map((r) => r.id);
-  const allIds = [...postIds, ...reelIds];
+  const allIds = [...allPosts.map((p) => p.id), ...allReels.map((r) => r.id)];
 
-  const [likeRows, saveRows, shareRows, commentRows, vLikeRows, vSaveRows] = await Promise.all([
-    Like.findAll({ where: { contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
-    Save.findAll({ where: { contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
-    Share.findAll({ where: { contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
-    Comment.findAll({ where: { contentId: { [Op.in]: allIds }, parentId: null, isDeleted: false }, attributes: ['contentId'], raw: true }),
+  const [vLikeRows, vBookmarkRows] = await Promise.all([
     Like.findAll({ where: { userId, contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
-    Save.findAll({ where: { userId, contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
+    Bookmark.findAll({ where: { userId, contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
   ]);
 
-  const tally = (rows) => rows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});
-  const likeCounts = tally(likeRows);
-  const saveCounts = tally(saveRows);
-  const shareCounts = tally(shareRows);
-  const commentCounts = tally(commentRows);
   const viewerLiked = new Set(vLikeRows.map((r) => r.contentId));
-  const viewerSaved = new Set(vSaveRows.map((r) => r.contentId));
+  const viewerBookmarked = new Set(vBookmarkRows.map((r) => r.contentId));
 
-  // ── Score, format, sort ───────────────────────────────────────────────────────
   const items = [];
 
   allPosts.forEach((post) => {
-    const likeCount = likeCounts[post.id] || 0;
-    const saveCount = saveCounts[post.id] || 0;
-    const shareCount = shareCounts[post.id] || 0;
-    const commentCount = commentCounts[post.id] || 0;
     const isFollowing = followingSet.has(post.userId);
     const interestMatch = post.hashtags.some((h) => userInterests.has(h.name.toLowerCase()));
 
     items.push({
-      _score: computeScore({ createdAt: post.createdAt, likeCount, saveCount, shareCount, interestMatch, isFollowing }),
+      _score: computeScore({ createdAt: post.createdAt, likeCount: post.likeCount, bookmarkCount: post.bookmarkCount, repostCount: post.repostCount, interestMatch, isFollowing }),
       type: 'post',
       id: post.id,
       caption: post.caption,
@@ -134,23 +109,19 @@ const getFeed = async (userId, { page = 1, limit = 20 } = {}) => {
       media: post.media.sort((a, b) => a.order - b.order).map((m) => m.mediaUrl),
       hashtags: post.hashtags.map((h) => h.name),
       mentions: post.mentions.map((m) => ({ id: m.mentionedUser.id, username: m.mentionedUser.username, profileImage: m.mentionedUser.profileImage || null })),
-      likeCount, saveCount, shareCount, commentCount,
+      likeCount: post.likeCount, bookmarkCount: post.bookmarkCount, repostCount: post.repostCount, replyCount: post.replyCount,
       hasLiked: viewerLiked.has(post.id),
-      hasSaved: viewerSaved.has(post.id),
+      hasBookmarked: viewerBookmarked.has(post.id),
       isFromFollowing: isFollowing,
     });
   });
 
   allReels.forEach((reel) => {
-    const likeCount = likeCounts[reel.id] || 0;
-    const saveCount = saveCounts[reel.id] || 0;
-    const shareCount = shareCounts[reel.id] || 0;
-    const commentCount = commentCounts[reel.id] || 0;
     const isFollowing = followingSet.has(reel.userId);
     const interestMatch = reel.hashtags.some((h) => userInterests.has(h.name.toLowerCase()));
 
     items.push({
-      _score: computeScore({ createdAt: reel.createdAt, likeCount, saveCount, shareCount, interestMatch, isFollowing }),
+      _score: computeScore({ createdAt: reel.createdAt, likeCount: 0, bookmarkCount: 0, repostCount: 0, interestMatch, isFollowing }),
       type: 'reel',
       id: reel.id,
       videoUrl: reel.videoUrl,
@@ -160,9 +131,9 @@ const getFeed = async (userId, { page = 1, limit = 20 } = {}) => {
       author: { id: reel.author.id, username: reel.author.username, fullName: reel.author.fullName, profileImage: reel.author.profileImage || null },
       hashtags: reel.hashtags.map((h) => h.name),
       mentions: reel.mentions.map((m) => ({ id: m.mentionedUser.id, username: m.mentionedUser.username, profileImage: m.mentionedUser.profileImage || null })),
-      likeCount, saveCount, shareCount, commentCount,
+      likeCount: 0, bookmarkCount: 0, repostCount: 0, replyCount: 0,
       hasLiked: viewerLiked.has(reel.id),
-      hasSaved: viewerSaved.has(reel.id),
+      hasBookmarked: viewerBookmarked.has(reel.id),
       isFromFollowing: isFollowing,
     });
   });
@@ -175,10 +146,9 @@ const getFeed = async (userId, { page = 1, limit = 20 } = {}) => {
   return { feed: paginated, page, limit, hasMore: offset + limit < items.length };
 };
 
-// ── Home feed — own posts/reels first (page 1), then following, chronological ──
 const HOME_FETCH_MULTIPLIER = 3;
 
-const formatFeedPost = (post, counts, viewerLiked, viewerSaved) => ({
+const formatFeedPost = (post, viewerLiked, viewerBookmarked) => ({
   type: 'post',
   id: post.id,
   caption: post.caption,
@@ -187,15 +157,15 @@ const formatFeedPost = (post, counts, viewerLiked, viewerSaved) => ({
   media: post.media.sort((a, b) => a.order - b.order).map((m) => m.mediaUrl),
   hashtags: post.hashtags.map((h) => h.name),
   mentions: post.mentions.map((m) => ({ id: m.mentionedUser.id, username: m.mentionedUser.username, profileImage: m.mentionedUser.profileImage || null })),
-  likeCount: counts.like[post.id] || 0,
-  saveCount: counts.save[post.id] || 0,
-  shareCount: counts.share[post.id] || 0,
-  commentCount: counts.comment[post.id] || 0,
+  likeCount: post.likeCount || 0,
+  bookmarkCount: post.bookmarkCount || 0,
+  repostCount: post.repostCount || 0,
+  replyCount: post.replyCount || 0,
   hasLiked: viewerLiked.has(post.id),
-  hasSaved: viewerSaved.has(post.id),
+  hasBookmarked: viewerBookmarked.has(post.id),
 });
 
-const formatFeedReel = (reel, counts, viewerLiked, viewerSaved) => ({
+const formatFeedReel = (reel, viewerLiked, viewerBookmarked) => ({
   type: 'reel',
   id: reel.id,
   videoUrl: reel.videoUrl,
@@ -205,40 +175,29 @@ const formatFeedReel = (reel, counts, viewerLiked, viewerSaved) => ({
   author: { id: reel.author.id, username: reel.author.username, fullName: reel.author.fullName, profileImage: reel.author.profileImage || null },
   hashtags: reel.hashtags.map((h) => h.name),
   mentions: reel.mentions.map((m) => ({ id: m.mentionedUser.id, username: m.mentionedUser.username, profileImage: m.mentionedUser.profileImage || null })),
-  likeCount: counts.like[reel.id] || 0,
-  saveCount: counts.save[reel.id] || 0,
-  shareCount: counts.share[reel.id] || 0,
-  commentCount: counts.comment[reel.id] || 0,
+  likeCount: 0,
+  bookmarkCount: 0,
+  repostCount: 0,
+  replyCount: 0,
   hasLiked: viewerLiked.has(reel.id),
-  hasSaved: viewerSaved.has(reel.id),
+  hasBookmarked: viewerBookmarked.has(reel.id),
 });
 
 const attachHomeStats = async (viewerId, posts, reels) => {
   const allIds = [...posts.map((p) => p.id), ...reels.map((r) => r.id)];
   if (allIds.length === 0) return [];
 
-  const [likeRows, saveRows, shareRows, commentRows, vLikeRows, vSaveRows] = await Promise.all([
-    Like.findAll({ where: { contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
-    Save.findAll({ where: { contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
-    Share.findAll({ where: { contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
-    Comment.findAll({ where: { contentId: { [Op.in]: allIds }, parentId: null, isDeleted: false }, attributes: ['contentId'], raw: true }),
+  const [vLikeRows, vBookmarkRows] = await Promise.all([
     Like.findAll({ where: { userId: viewerId, contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
-    Save.findAll({ where: { userId: viewerId, contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
+    Bookmark.findAll({ where: { userId: viewerId, contentId: { [Op.in]: allIds } }, attributes: ['contentId'], raw: true }),
   ]);
 
-  const tally = (rows) => rows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});
-  const counts = {
-    like: tally(likeRows),
-    save: tally(saveRows),
-    share: tally(shareRows),
-    comment: tally(commentRows),
-  };
   const viewerLiked = new Set(vLikeRows.map((r) => r.contentId));
-  const viewerSaved = new Set(vSaveRows.map((r) => r.contentId));
+  const viewerBookmarked = new Set(vBookmarkRows.map((r) => r.contentId));
 
   const items = [
-    ...posts.map((p) => formatFeedPost(p, counts, viewerLiked, viewerSaved)),
-    ...reels.map((r) => formatFeedReel(r, counts, viewerLiked, viewerSaved)),
+    ...posts.map((p) => formatFeedPost(p, viewerLiked, viewerBookmarked)),
+    ...reels.map((r) => formatFeedReel(r, viewerLiked, viewerBookmarked)),
   ];
   items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   return items;
@@ -248,7 +207,6 @@ const getHomeFeed = async (userId, { page = 1, limit = 10 } = {}) => {
   page = Math.max(1, page);
   limit = Math.max(1, limit);
 
-  // ── Page 1: the viewer's own recent posts/reels ──────────────────────────────
   if (page === 1) {
     const [posts, reels] = await Promise.all([
       Post.findAll({ where: { userId }, include: postIncludes, order: [['createdAt', 'DESC']], limit }),
@@ -261,7 +219,6 @@ const getHomeFeed = async (userId, { page = 1, limit = 10 } = {}) => {
     return { feed: items, page, limit, hasMore: followingCount > 0 };
   }
 
-  // ── Page 2+: chronological posts/reels from followed accounts ────────────────
   const followingRows = await Follow.findAll({ where: { followerId: userId, status: 'accepted' }, attributes: ['followingId'], raw: true });
   const followingIds = followingRows.map((f) => f.followingId);
   if (followingIds.length === 0) return { feed: [], page, limit, hasMore: false };

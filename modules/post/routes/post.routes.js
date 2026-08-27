@@ -6,22 +6,22 @@ const validate = require('../../../middleware/validate');
 const { uuidParam } = require('../../../utils/paramValidators');
 const { uploadPostImages } = require('../../../middleware/upload');
 const { createPostValidator } = require('../validators/post.validator');
-const { commentTextValidator } = require('../../comment/validators/comment.validator');
+const { replyTextValidator } = require('../../reply/validators/reply.validator');
 const {
   createPostController,
   getPostController,
   likePostController,
-  savePostController,
-  sharePostController,
+  bookmarkPostController,
+  repostPostController,
 } = require('../controllers/post.controller');
 const {
-  addCommentController,
-  getCommentsController,
   addReplyController,
   getRepliesController,
-  deleteCommentController,
-  likeCommentController,
-} = require('../../comment/controllers/comment.controller');
+  addNestedReplyController,
+  getNestedRepliesController,
+  deleteReplyController,
+  likeReplyController,
+} = require('../../reply/controllers/reply.controller');
 
 const setPost = (req, res, next) => { req.contentType = 'post'; next(); };
 
@@ -34,56 +34,56 @@ router.get('/:id', auth, uuidParam('id'), validate, getPostController);
 // POST /api/posts/:id/like
 router.post('/:id/like', auth, uuidParam('id'), validate, likePostController);
 
-// POST /api/posts/:id/save
-router.post('/:id/save', auth, uuidParam('id'), validate, savePostController);
+// POST /api/posts/:id/bookmark
+router.post('/:id/bookmark', auth, uuidParam('id'), validate, bookmarkPostController);
 
-// POST /api/posts/:id/share
-router.post('/:id/share', auth, uuidParam('id'), validate, sharePostController);
+// POST /api/posts/:id/repost
+router.post('/:id/repost', auth, uuidParam('id'), validate, repostPostController);
 
-// Comments
-router.get('/:id/comments', auth, uuidParam('id'), validate, setPost, getCommentsController);
+// Replies
+router.get('/:id/replies', auth, uuidParam('id'), validate, setPost, getRepliesController);
 router.post(
-  '/:id/comments',
+  '/:id/replies',
   auth,
   setPost,
   uuidParam('id'),
-  commentTextValidator,
-  validate,
-  addCommentController
-);
-router.get(
-  '/:id/comments/:commentId/replies',
-  auth,
-  uuidParam('id'),
-  uuidParam('commentId'),
-  validate,
-  getRepliesController
-);
-router.post(
-  '/:id/comments/:commentId/replies',
-  auth,
-  setPost,
-  uuidParam('id'),
-  uuidParam('commentId'),
-  commentTextValidator,
+  replyTextValidator,
   validate,
   addReplyController
 );
-router.delete(
-  '/:id/comments/:commentId',
+router.get(
+  '/:id/replies/:replyId/replies',
   auth,
   uuidParam('id'),
-  uuidParam('commentId'),
+  uuidParam('replyId'),
   validate,
-  deleteCommentController
+  getNestedRepliesController
 );
 router.post(
-  '/:id/comments/:commentId/like',
+  '/:id/replies/:replyId/replies',
+  auth,
+  setPost,
+  uuidParam('id'),
+  uuidParam('replyId'),
+  replyTextValidator,
+  validate,
+  addNestedReplyController
+);
+router.delete(
+  '/:id/replies/:replyId',
   auth,
   uuidParam('id'),
-  uuidParam('commentId'),
+  uuidParam('replyId'),
   validate,
-  likeCommentController
+  deleteReplyController
+);
+router.post(
+  '/:id/replies/:replyId/like',
+  auth,
+  uuidParam('id'),
+  uuidParam('replyId'),
+  validate,
+  likeReplyController
 );
 
 module.exports = router;

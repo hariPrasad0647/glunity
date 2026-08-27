@@ -1,12 +1,12 @@
 {
   "info": {
-    "name": "CircleUp API",
-    "_postman_id": "circleup-api-collection",
-    "description": "Complete API collection for CircleUp.\n\nVariables:\n  {{baseUrl}}  — https://circle-up-fk10.onrender.com (change to http://localhost:5000 for local)\n  {{token}}    — paste your JWT access token here after login",
+    "name": "Glunity API",
+    "_postman_id": "glunity-api-collection",
+    "description": "Complete API collection for Glunity.\n\nVariables:\n  {{baseUrl}}  — https://glunity-fk10.onrender.com (change to http://localhost:5000 for local)\n  {{token}}    — paste your JWT access token here after login",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "https://circle-up-fk10.onrender.com", "type": "string" },
+    { "key": "baseUrl", "value": "https://glunity-fk10.onrender.com", "type": "string" },
     { "key": "token",   "value": "",                                      "type": "string" }
   ],
   "item": [

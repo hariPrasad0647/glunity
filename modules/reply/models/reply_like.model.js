@@ -2,9 +2,10 @@ const { DataTypes } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
 const sequelize = require('../../../config/db');
 const User = require('../../user/models/user.model');
+const Reply = require('./reply.model');
 
-const Share = sequelize.define(
-  'Share',
+const ReplyLike = sequelize.define(
+  'ReplyLike',
   {
     id: {
       type: DataTypes.UUID,
@@ -17,23 +18,23 @@ const Share = sequelize.define(
       references: { model: 'users', key: 'id' },
       onDelete: 'CASCADE',
     },
-    contentType: {
-      type: DataTypes.ENUM('post', 'reel'),
-      allowNull: false,
-    },
-    contentId: {
+    replyId: {
       type: DataTypes.UUID,
       allowNull: false,
+      references: { model: 'replies', key: 'id' },
+      onDelete: 'CASCADE',
     },
   },
   {
-    tableName: 'shares',
+    tableName: 'reply_likes',
     timestamps: true,
     updatedAt: false,
-    indexes: [{ unique: true, fields: ['userId', 'contentType', 'contentId'] }],
+    indexes: [{ unique: true, fields: ['userId', 'replyId'] }],
   }
 );
 
-Share.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+ReplyLike.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+ReplyLike.belongsTo(Reply, { foreignKey: 'replyId' });
+Reply.hasMany(ReplyLike, { foreignKey: 'replyId', as: 'likes' });
 
-module.exports = Share;
+module.exports = ReplyLike;

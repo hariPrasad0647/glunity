@@ -1,8 +1,8 @@
 const { createReel, getReelById, formatReel, getPublicReelsFeed } = require('../services/reel.service');
 const {
   toggleLike,
-  toggleSave,
-  shareContent,
+  toggleBookmark,
+  repostContent,
   getInteractionStats,
 } = require('../../post/services/interaction.service');
 const { success, error } = require('../../../utils/response');
@@ -56,20 +56,20 @@ const likeReelController = async (req, res, next) => {
   }
 };
 
-const saveReelController = async (req, res, next) => {
+const bookmarkReelController = async (req, res, next) => {
   try {
-    const result = await toggleSave(req.user.id, 'reel', req.params.id);
-    return success(res, 200, result.saved ? 'Reel saved' : 'Reel unsaved', result);
+    const result = await toggleBookmark(req.user.id, 'reel', req.params.id);
+    return success(res, 200, result.bookmarked ? 'Reel bookmarked' : 'Reel unbookmarked', result);
   } catch (err) {
     if (err.status) return error(res, err.status, err.message);
     next(err);
   }
 };
 
-const shareReelController = async (req, res, next) => {
+const repostReelController = async (req, res, next) => {
   try {
-    const result = await shareContent(req.user.id, 'reel', req.params.id);
-    return success(res, 200, 'Reel shared with your followers', result);
+    const result = await repostContent(req.user.id, 'reel', req.params.id);
+    return success(res, 200, 'Reel reposted to your followers', result);
   } catch (err) {
     if (err.status) return error(res, err.status, err.message);
     next(err);
@@ -81,6 +81,6 @@ module.exports = {
   getPublicReelsController,
   getReelController,
   likeReelController,
-  saveReelController,
-  shareReelController,
+  bookmarkReelController,
+  repostReelController,
 };

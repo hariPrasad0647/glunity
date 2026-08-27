@@ -2,16 +2,16 @@ const BREVO_SEND_URL = 'https://api.brevo.com/v3/smtp/email';
 
 const OTP_COPY = {
   signup: {
-    subject: 'Your CircleUp verification code',
+    subject: 'Your Glunity verification code',
     title: 'Verify your email address',
     intro: (minutes) =>
-      `Use the code below to complete your CircleUp sign‑up. It will expire in <strong>${minutes} minute${minutes !== 1 ? 's' : ''}</strong>.`,
+      `Use the code below to complete your Glunity sign‑up. It will expire in <strong>${minutes} minute${minutes !== 1 ? 's' : ''}</strong>.`,
   },
   login: {
-    subject: 'Your CircleUp login code',
+    subject: 'Your Glunity login code',
     title: 'Confirm your login',
     intro: (minutes) =>
-      `Use the code below to log in to CircleUp. It will expire in <strong>${minutes} minute${minutes !== 1 ? 's' : ''}</strong>.`,
+      `Use the code below to log in to Glunity. It will expire in <strong>${minutes} minute${minutes !== 1 ? 's' : ''}</strong>.`,
   },
 };
 
@@ -33,7 +33,7 @@ const buildOtpEmail = (code, minutes, purpose = 'signup') => {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>${copy.title} – CircleUp</title>
+  <title>${copy.title} – Glunity</title>
 </head>
 <body style="margin:0;padding:0;background:#f9f9fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
@@ -46,9 +46,7 @@ const buildOtpEmail = (code, minutes, purpose = 'signup') => {
           <!-- Header -->
           <tr>
             <td style="background:#000000;padding:28px 40px;text-align:center;">
-              <span style="font-size:24px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
-                Circle<span style="color:#a3e635;">Up</span>
-              </span>
+                Glunity
             </td>
           </tr>
 
@@ -72,7 +70,7 @@ const buildOtpEmail = (code, minutes, purpose = 'signup') => {
                      style="background:#fff7ed;border-left:4px solid #f97316;border-radius:4px;margin-bottom:32px;width:100%;">
                 <tr>
                   <td style="padding:12px 16px;font-size:13px;color:#92400e;line-height:1.5;">
-                    <strong>Never share this code.</strong> CircleUp will never ask for it via phone or chat.
+                    <strong>Never share this code.</strong> Glunity will never ask for it via phone or chat.
                     If you didn't request this, you can safely ignore this email.
                   </td>
                 </tr>
@@ -88,10 +86,10 @@ const buildOtpEmail = (code, minutes, purpose = 'signup') => {
           <tr>
             <td style="background:#f4f4f5;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
               <p style="margin:0;font-size:12px;color:#9ca3af;">
-                © ${new Date().getFullYear()} CircleUp. All rights reserved.
+                © ${new Date().getFullYear()} Glunity. All rights reserved.
               </p>
               <p style="margin:6px 0 0;font-size:12px;color:#9ca3af;">
-                You're receiving this because you signed up at CircleUp.
+                You're receiving this because you signed up at Glunity.
               </p>
             </td>
           </tr>
@@ -107,7 +105,7 @@ const buildOtpEmail = (code, minutes, purpose = 'signup') => {
 const parseSender = (raw = '') => {
   const match = raw.match(/^(.+?)\s*<(.+?)>$/);
   if (match) return { name: match[1].trim(), email: match[2].trim() };
-  return { name: 'CircleUp', email: raw.trim() };
+  return { name: 'Glunity', email: raw.trim() };
 };
 
 const sendOtpEmail = async (to, code, purpose = 'signup') => {

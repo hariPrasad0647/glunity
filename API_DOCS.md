@@ -1,4 +1,4 @@
-# CircleUp API Documentation
+# Glunity API Documentation
 
 > **Base URL**: `https://<your-domain>/api`  
 > **Content-Type**: `application/json` (unless noted as multipart/form-data)  

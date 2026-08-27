@@ -79,10 +79,26 @@ const verifyLoginValidator = [
     .withMessage('Login code must be numeric'),
 ];
 
+const googleLoginValidator = [
+  body('idToken')
+    .trim()
+    .notEmpty()
+    .withMessage('Google ID token is required'),
+];
+
+const appleLoginValidator = [
+  body('identityToken')
+    .trim()
+    .notEmpty()
+    .withMessage('Apple identity token is required'),
+];
+
 module.exports = {
   signupValidator,
   resendOtpValidator,
   verifyOtpValidator,
   loginValidator,
   verifyLoginValidator,
+  googleLoginValidator,
+  appleLoginValidator,
 };

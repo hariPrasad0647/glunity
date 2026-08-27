@@ -1,4 +1,6 @@
 const authService = require('../services/auth.service');
+const googleService = require('../services/google.service');
+const appleService = require('../services/apple.service');
 const response = require('../../../utils/response');
 
 const signup = async (req, res, next) => {
@@ -51,4 +53,36 @@ const verifyLogin = async (req, res, next) => {
   }
 };
 
-module.exports = { signup, resendOtp, verifyOtp, login, verifyLogin };
+const googleLogin = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+    const googleProfile = await googleService.verifyGoogleToken(idToken);
+    const result = await authService.socialLogin({
+      provider: 'GOOGLE',
+      providerUserId: googleProfile.providerUserId,
+      email: googleProfile.email,
+      fullName: googleProfile.fullName,
+    });
+    return response.success(res, 200, 'Logged in with Google successfully', result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const appleLogin = async (req, res, next) => {
+  try {
+    const { identityToken, fullName } = req.body;
+    const appleProfile = await appleService.verifyAppleToken(identityToken);
+    const result = await authService.socialLogin({
+      provider: 'APPLE',
+      providerUserId: appleProfile.providerUserId,
+      email: appleProfile.email,
+      fullName: fullName || 'Apple User', // fullName might only be sent on first sign-in
+    });
+    return response.success(res, 200, 'Logged in with Apple successfully', result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { signup, resendOtp, verifyOtp, login, verifyLogin, googleLogin, appleLogin };

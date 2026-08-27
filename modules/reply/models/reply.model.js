@@ -3,8 +3,8 @@ const { v4: uuidv4 } = require('uuid');
 const sequelize = require('../../../config/db');
 const User = require('../../user/models/user.model');
 
-const Comment = sequelize.define(
-  'Comment',
+const Reply = sequelize.define(
+  'Reply',
   {
     id: {
       type: DataTypes.UUID,
@@ -32,7 +32,7 @@ const Comment = sequelize.define(
     parentId: {
       type: DataTypes.UUID,
       allowNull: true,
-      references: { model: 'comments', key: 'id' },
+      references: { model: 'replies', key: 'id' },
       onDelete: 'CASCADE',
     },
     isDeleted: {
@@ -42,13 +42,13 @@ const Comment = sequelize.define(
     },
   },
   {
-    tableName: 'comments',
+    tableName: 'replies',
     timestamps: true,
   }
 );
 
-Comment.belongsTo(User, { foreignKey: 'userId', as: 'author' });
-Comment.hasMany(Comment, { foreignKey: 'parentId', as: 'replies' });
-Comment.belongsTo(Comment, { foreignKey: 'parentId', as: 'parent' });
+Reply.belongsTo(User, { foreignKey: 'userId', as: 'author' });
+Reply.hasMany(Reply, { foreignKey: 'parentId', as: 'replies' });
+Reply.belongsTo(Reply, { foreignKey: 'parentId', as: 'parent' });
 
-module.exports = Comment;
+module.exports = Reply;

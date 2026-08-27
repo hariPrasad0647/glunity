@@ -1,8 +1,8 @@
 const { createPost, getPostById, formatPost } = require('../services/post.service');
 const {
   toggleLike,
-  toggleSave,
-  shareContent,
+  toggleBookmark,
+  repostContent,
   getInteractionStats,
 } = require('../services/interaction.service');
 const { success, error } = require('../../../utils/response');
@@ -44,20 +44,20 @@ const likePostController = async (req, res, next) => {
   }
 };
 
-const savePostController = async (req, res, next) => {
+const bookmarkPostController = async (req, res, next) => {
   try {
-    const result = await toggleSave(req.user.id, 'post', req.params.id);
-    return success(res, 200, result.saved ? 'Post saved' : 'Post unsaved', result);
+    const result = await toggleBookmark(req.user.id, 'post', req.params.id);
+    return success(res, 200, result.bookmarked ? 'Post bookmarked' : 'Post unbookmarked', result);
   } catch (err) {
     if (err.status) return error(res, err.status, err.message);
     next(err);
   }
 };
 
-const sharePostController = async (req, res, next) => {
+const repostPostController = async (req, res, next) => {
   try {
-    const result = await shareContent(req.user.id, 'post', req.params.id);
-    return success(res, 200, 'Post shared with your followers', result);
+    const result = await repostContent(req.user.id, 'post', req.params.id);
+    return success(res, 200, 'Post reposted to your followers', result);
   } catch (err) {
     if (err.status) return error(res, err.status, err.message);
     next(err);
@@ -68,6 +68,6 @@ module.exports = {
   createPostController,
   getPostController,
   likePostController,
-  savePostController,
-  sharePostController,
+  bookmarkPostController,
+  repostPostController,
 };

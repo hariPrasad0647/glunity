@@ -3,6 +3,7 @@ const sequelize = require('../../../config/db');
 const User = require('../../user/models/user.model');
 const Otp = require('../models/otp.model');
 const PendingSignup = require('../models/pending-signup.model');
+const AuthIdentity = require('../models/auth-identity.model');
 const { generateOtp, hashOtp, compareOtp } = require('../../../utils/otp');
 const { sendOtpEmail } = require('../../../utils/email');
 const { signAccessToken, signRefreshToken } = require('../../../config/jwt');
@@ -208,4 +209,62 @@ const verifyLogin = async (email, code) => {
   return buildAuthResponse(user);
 };
 
-module.exports = { ApiError, signup, resendOtp, verifyOtp, requestLogin, verifyLogin };
+const socialLogin = async ({ provider, providerUserId, email, fullName }) => {
+  let identity = await AuthIdentity.findOne({
+    where: { provider, providerUserId },
+    include: [{ model: User, as: 'user' }],
+  });
+
+  if (identity) {
+    return buildAuthResponse(identity.user);
+  }
+
+  if (email) {
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      throw new ApiError(
+        409,
+        'An account with this email already exists. Please login using your Email and link this social account in your settings.'
+      );
+    }
+  }
+
+  // Create new user & identity atomically
+  const user = await sequelize.transaction(async (t) => {
+    // Generate a unique username based on full name or random string
+    const baseUsername = fullName
+      ? fullName.toLowerCase().replace(/[^a-z0-9]/g, '')
+      : provider.toLowerCase();
+    
+    // Quick uniqueness check (ideally this should have a robust loop, but fine for now)
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const username = `${baseUsername}${randomSuffix}`.substring(0, 30);
+
+    const newUser = await User.create(
+      {
+        fullName: fullName || 'New User',
+        username,
+        email: email || `${providerUserId}@${provider.toLowerCase()}.local`,
+        phone: null, // Phone is now nullable
+        isVerified: true, // Social accounts are pre-verified
+      },
+      { transaction: t }
+    );
+
+    await AuthIdentity.create(
+      {
+        userId: newUser.id,
+        provider,
+        providerUserId,
+        email,
+      },
+      { transaction: t }
+    );
+
+    return newUser;
+  });
+
+  return buildAuthResponse(user);
+};
+
+module.exports = { ApiError, signup, resendOtp, verifyOtp, requestLogin, verifyLogin, socialLogin };

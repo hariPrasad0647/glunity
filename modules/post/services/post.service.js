@@ -34,11 +34,11 @@ const formatPost = (post, stats = {}) => ({
     profileImage: m.mentionedUser.profileImage || null,
   })),
   likeCount: stats.likeCount ?? 0,
-  saveCount: stats.saveCount ?? 0,
-  shareCount: stats.shareCount ?? 0,
+  bookmarkCount: stats.bookmarkCount ?? 0,
+  repostCount: stats.repostCount ?? 0,
   commentCount: stats.commentCount ?? 0,
   hasLiked: stats.hasLiked ?? false,
-  hasSaved: stats.hasSaved ?? false,
+  hasBookmarked: stats.hasBookmarked ?? false,
 });
 
 const getPostById = async (postId) => {

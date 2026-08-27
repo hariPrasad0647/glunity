@@ -1,6 +1,6 @@
-# CircleUp API
+# Glunity API
 
-REST API for CircleUp, a social platform supporting posts, reels (short video), stories, real-time chat, follows, comments, likes/saves/shares, and a personalized home feed.
+REST API for Glunity, a social platform supporting posts, reels (short video), stories, real-time chat, follows, comments, likes/saves/shares, and a personalized home feed.
 
 ## Tech stack
 
@@ -95,7 +95,7 @@ Every response follows the same envelope:
 { "success": false, "message": "...", "errors": [{ "field": "caption", "message": "..." }] }
 ```
 
-Full endpoint-by-endpoint documentation: [API_DOCS.md](API_DOCS.md) and [HOME_FEED_AND_REELS_DISCOVER_API.md](HOME_FEED_AND_REELS_DISCOVER_API.md). A ready-to-import Postman collection is at [CircleUp.postman_collection.json](CircleUp.postman_collection.json).
+Full endpoint-by-endpoint documentation: [API_DOCS.md](API_DOCS.md) and [HOME_FEED_AND_REELS_DISCOVER_API.md](HOME_FEED_AND_REELS_DISCOVER_API.md). A ready-to-import Postman collection is at [Glunity.postman_collection.json](Glunity.postman_collection.json).
 
 ## Scripts
 

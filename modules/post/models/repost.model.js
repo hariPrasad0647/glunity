@@ -2,10 +2,9 @@ const { DataTypes } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
 const sequelize = require('../../../config/db');
 const User = require('../../user/models/user.model');
-const Comment = require('./comment.model');
 
-const CommentLike = sequelize.define(
-  'CommentLike',
+const Repost = sequelize.define(
+  'Repost',
   {
     id: {
       type: DataTypes.UUID,
@@ -18,23 +17,23 @@ const CommentLike = sequelize.define(
       references: { model: 'users', key: 'id' },
       onDelete: 'CASCADE',
     },
-    commentId: {
+    contentType: {
+      type: DataTypes.ENUM('post', 'reel'),
+      allowNull: false,
+    },
+    contentId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: 'comments', key: 'id' },
-      onDelete: 'CASCADE',
     },
   },
   {
-    tableName: 'comment_likes',
+    tableName: 'reposts',
     timestamps: true,
     updatedAt: false,
-    indexes: [{ unique: true, fields: ['userId', 'commentId'] }],
+    indexes: [{ unique: true, fields: ['userId', 'contentType', 'contentId'] }],
   }
 );
 
-CommentLike.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-CommentLike.belongsTo(Comment, { foreignKey: 'commentId' });
-Comment.hasMany(CommentLike, { foreignKey: 'commentId', as: 'likes' });
+Repost.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-module.exports = CommentLike;
+module.exports = Repost;

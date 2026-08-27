@@ -10,9 +10,9 @@ const PostMention = require('../../post/models/post_mention.model');
 const Reel = require('../../reel/models/reel.model');
 const ReelMention = require('../../reel/models/reel_mention.model');
 const Like = require('../../post/models/like.model');
-const Save = require('../../post/models/bookmark.model');
-const Share = require('../../post/models/share.model');
-const Comment = require('../../comment/models/comment.model');
+const Bookmark = require('../../post/models/bookmark.model');
+const Repost = require('../../post/models/repost.model');
+const Reply = require('../../reply/models/reply.model');
 
 const FOLLOWER_ATTRS = ['id', 'username', 'fullName', 'profileImage'];
 
@@ -441,11 +441,11 @@ const getUserPosts = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
 
   const [likeRows, saveRows, shareRows, commentRows, viewerLikeRows, viewerSaveRows] = await Promise.all([
     Like.findAll({ where: { contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
-    Save.findAll({ where: { contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
-    Share.findAll({ where: { contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
-    Comment.findAll({ where: { contentType: 'post', contentId: { [Op.in]: postIds }, parentId: null, isDeleted: false }, attributes: ['contentId'], raw: true }),
+    Bookmark.findAll({ where: { contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
+    Repost.findAll({ where: { contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
+    Reply.findAll({ where: { contentType: 'post', contentId: { [Op.in]: postIds }, parentId: null, isDeleted: false }, attributes: ['contentId'], raw: true }),
     Like.findAll({ where: { userId: viewerId, contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
-    Save.findAll({ where: { userId: viewerId, contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
+    Bookmark.findAll({ where: { userId: viewerId, contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
   ]);
 
   const likeCounts = likeRows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});
@@ -506,11 +506,11 @@ const getUserReels = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
 
   const [likeRows, saveRows, shareRows, commentRows, viewerLikeRows, viewerSaveRows] = await Promise.all([
     Like.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
-    Save.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
-    Share.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
-    Comment.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds }, parentId: null, isDeleted: false }, attributes: ['contentId'], raw: true }),
+    Bookmark.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
+    Repost.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
+    Reply.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds }, parentId: null, isDeleted: false }, attributes: ['contentId'], raw: true }),
     Like.findAll({ where: { userId: viewerId, contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
-    Save.findAll({ where: { userId: viewerId, contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
+    Bookmark.findAll({ where: { userId: viewerId, contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
   ]);
 
   const likeCounts = likeRows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});

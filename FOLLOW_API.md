@@ -1,6 +1,6 @@
 # Follow API
 
-Base URL: `https://circle-up-fk10.onrender.com/api/users`
+Base URL: `https://glunity-fk10.onrender.com/api/users`
 
 All endpoints below require authentication:
 ```

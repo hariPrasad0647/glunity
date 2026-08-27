@@ -4,7 +4,7 @@ const { success, error } = require('../../../utils/response');
 
 const createContentController = async (req, res, next) => {
   try {
-    const { caption, isPrivate } = req.body;
+    const { caption, content, isPrivate } = req.body;
 
     if (req.contentType === 'reel') {
       const { videoUrl, thumbnailUrl } = req.reelUpload;
@@ -13,11 +13,14 @@ const createContentController = async (req, res, next) => {
     }
 
     if (req.contentType === 'post') {
-      const post = await createPost(req.user.id, { caption, isPrivate }, req.cdnUrls);
+      if (!req.cdnUrls?.length && (!content || content.trim() === '')) {
+        return error(res, 400, 'Post must contain text or media');
+      }
+      const post = await createPost(req.user.id, { content, isPrivate }, req.cdnUrls || []);
       return success(res, 201, 'Post created successfully', { type: 'post', ...post });
     }
 
-    return error(res, 400, 'Provide either images (post) or a video (reel)');
+    return error(res, 400, 'Invalid content type');
   } catch (err) {
     next(err);
   }

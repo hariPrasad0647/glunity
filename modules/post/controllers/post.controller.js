@@ -9,11 +9,11 @@ const { success, error } = require('../../../utils/response');
 
 const createPostController = async (req, res, next) => {
   try {
-    if (!req.cdnUrls || req.cdnUrls.length === 0) {
-      return error(res, 400, 'At least one image is required');
+    const { content, isPrivate } = req.body;
+    if ((!req.cdnUrls || req.cdnUrls.length === 0) && (!content || content.trim() === '')) {
+      return error(res, 400, 'Post must contain text or media');
     }
-    const { caption, isPrivate } = req.body;
-    const post = await createPost(req.user.id, { caption, isPrivate }, req.cdnUrls);
+    const post = await createPost(req.user.id, { content, isPrivate }, req.cdnUrls || []);
     return success(res, 201, 'Post created successfully', post);
   } catch (err) {
     next(err);

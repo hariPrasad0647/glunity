@@ -17,7 +17,7 @@ const Post = sequelize.define(
       references: { model: 'users', key: 'id' },
       onDelete: 'CASCADE',
     },
-    caption: {
+    content: {
       type: DataTypes.TEXT,
       allowNull: true,
     },

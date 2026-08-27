@@ -168,7 +168,10 @@ const uploadContent = (req, res, next) => {
     if (hasImages && hasVideo) {
       return error(res, 400, 'Send either images or a video, not both');
     }
-    if (!hasImages && !hasVideo) return next();
+    if (!hasImages && !hasVideo) {
+      req.contentType = 'post';
+      return next();
+    }
 
     try {
       const timestamp = Date.now();

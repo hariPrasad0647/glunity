@@ -458,7 +458,7 @@ const getUserPosts = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
   const formatted = posts.map((post) => ({
     type: 'post',
     id: post.id,
-    caption: post.caption,
+    content: post.content,
     isPrivate: post.isPrivate,
     createdAt: post.createdAt,
     author: { id: post.author.id, username: post.author.username, fullName: post.author.fullName, profileImage: post.author.profileImage || null },

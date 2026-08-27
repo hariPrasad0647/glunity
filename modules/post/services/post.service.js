@@ -17,7 +17,7 @@ const extractMentions = (text) => {
 
 const formatPost = (post, stats = {}) => ({
   id: post.id,
-  caption: post.caption,
+  content: post.content,
   isPrivate: post.isPrivate,
   createdAt: post.createdAt,
   author: {
@@ -59,17 +59,17 @@ const getPostById = async (postId) => {
   return post;
 };
 
-const createPost = async (userId, { caption, isPrivate = false }, cdnUrls) => {
-  const post = await Post.create({ userId, caption: caption || null, isPrivate });
+const createPost = async (userId, { content, isPrivate = false }, cdnUrls = []) => {
+  const post = await Post.create({ userId, content: content || null, isPrivate });
 
   // Store media in order
   await PostMedia.bulkCreate(
     cdnUrls.map((url, i) => ({ postId: post.id, mediaUrl: url, order: i }))
   );
 
-  if (caption) {
+  if (content) {
     // Hashtags
-    const tagNames = extractHashtags(caption);
+    const tagNames = extractHashtags(content);
     if (tagNames.length) {
       const tagRecords = await Promise.all(
         tagNames.map((name) => Hashtag.findOrCreate({ where: { name }, defaults: { name } }))
@@ -80,7 +80,7 @@ const createPost = async (userId, { caption, isPrivate = false }, cdnUrls) => {
     }
 
     // Mentions
-    const usernames = extractMentions(caption);
+    const usernames = extractMentions(content);
     if (usernames.length) {
       const mentionedUsers = await User.findAll({ where: { username: usernames } });
       if (mentionedUsers.length) {

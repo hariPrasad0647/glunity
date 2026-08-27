@@ -103,7 +103,7 @@ const getFeed = async (userId, { page = 1, limit = 20 } = {}) => {
       _score: computeScore({ createdAt: post.createdAt, likeCount: post.likeCount, bookmarkCount: post.bookmarkCount, repostCount: post.repostCount, interestMatch, isFollowing }),
       type: 'post',
       id: post.id,
-      caption: post.caption,
+      content: post.content,
       createdAt: post.createdAt,
       author: { id: post.author.id, username: post.author.username, fullName: post.author.fullName, profileImage: post.author.profileImage || null },
       media: post.media.sort((a, b) => a.order - b.order).map((m) => m.mediaUrl),
@@ -151,7 +151,7 @@ const HOME_FETCH_MULTIPLIER = 3;
 const formatFeedPost = (post, viewerLiked, viewerBookmarked) => ({
   type: 'post',
   id: post.id,
-  caption: post.caption,
+  content: post.content,
   createdAt: post.createdAt,
   author: { id: post.author.id, username: post.author.username, fullName: post.author.fullName, profileImage: post.author.profileImage || null },
   media: post.media.sort((a, b) => a.order - b.order).map((m) => m.mediaUrl),

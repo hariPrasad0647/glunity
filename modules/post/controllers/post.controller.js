@@ -1,4 +1,4 @@
-const { createPost, getPostById, formatPost } = require('../services/post.service');
+const { createPost, getPostById, formatPost, deletePost } = require('../services/post.service');
 const {
   toggleLike,
   toggleBookmark,
@@ -30,6 +30,16 @@ const getPostController = async (req, res, next) => {
     const stats = await getInteractionStats('post', req.params.id, req.user.id);
     return success(res, 200, 'Post fetched successfully', formatPost(post, stats));
   } catch (err) {
+    next(err);
+  }
+};
+
+const deletePostController = async (req, res, next) => {
+  try {
+    await deletePost(req.user.id, req.params.id);
+    return success(res, 200, 'Post deleted successfully');
+  } catch (err) {
+    if (err.status) return error(res, err.status, err.message);
     next(err);
   }
 };
@@ -67,6 +77,7 @@ const repostPostController = async (req, res, next) => {
 module.exports = {
   createPostController,
   getPostController,
+  deletePostController,
   likePostController,
   bookmarkPostController,
   repostPostController,

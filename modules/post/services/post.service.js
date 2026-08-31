@@ -94,4 +94,20 @@ const createPost = async (userId, { content, isPrivate = false }, cdnUrls = []) 
   return formatPost(await getPostById(post.id));
 };
 
-module.exports = { createPost, getPostById, formatPost };
+const deletePost = async (userId, postId) => {
+  const post = await Post.findByPk(postId);
+  if (!post) {
+    const error = new Error('Post not found');
+    error.status = 404;
+    throw error;
+  }
+  if (post.userId !== userId) {
+    const error = new Error('You are not authorized to delete this post');
+    error.status = 403;
+    throw error;
+  }
+  await post.destroy();
+  return { success: true };
+};
+
+module.exports = { createPost, getPostById, formatPost, deletePost };

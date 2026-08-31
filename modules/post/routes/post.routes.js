@@ -10,6 +10,7 @@ const { replyTextValidator } = require('../../reply/validators/reply.validator')
 const {
   createPostController,
   getPostController,
+  deletePostController,
   likePostController,
   bookmarkPostController,
   repostPostController,
@@ -30,6 +31,9 @@ router.post('/', auth, uploadPostImages, createPostValidator, validate, createPo
 
 // GET /api/posts/:id
 router.get('/:id', auth, uuidParam('id'), validate, getPostController);
+
+// DELETE /api/posts/:id
+router.delete('/:id', auth, uuidParam('id'), validate, deletePostController);
 
 // POST /api/posts/:id/like
 router.post('/:id/like', auth, uuidParam('id'), validate, likePostController);

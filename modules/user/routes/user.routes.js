@@ -30,6 +30,9 @@ const {
   getMeController,
   getMyPostsController,
   getMyReelsController,
+  getMyLikedPostsController,
+  getMyLikedReelsController,
+  getMyCommentsController,
 } = require('../controllers/user.controller');
 
 // PATCH /api/users/profile
@@ -84,6 +87,11 @@ router.get('/me/posts', auth, getMyPostsController);
 
 // GET /api/users/me/reels — paginated own reels
 router.get('/me/reels', auth, getMyReelsController);
+
+// ── My Activity ─────────────────────────────────────────────────────────────
+router.get('/me/liked/posts', auth, getMyLikedPostsController);
+router.get('/me/liked/reels', auth, getMyLikedReelsController);
+router.get('/me/comments', auth, getMyCommentsController);
 
 // ── Public profile viewing ────────────────────────────────────────────────────
 // These must stay above /:id/follow to prevent Express matching 'posts'/'reels' as :id

@@ -44,7 +44,28 @@ const start = async () => {
     await sequelize.sync({ alter: true });
     logger.info('Database connected');
 
-    server.listen(PORT, () => logger.info(`Server running on port ${PORT}`));
+    server.listen(PORT, () => {
+      logger.info(`Server running on port ${PORT}`);
+
+      // Keep Render free tier awake by self-pinging every 14 mins
+      const url = process.env.RENDER_EXTERNAL_URL;
+      if (url) {
+        const https = require('https');
+        setInterval(() => {
+          https.get(`${url}/health`, (res) => {
+            if (res.statusCode === 200) {
+              logger.info('Self-ping successful');
+            } else {
+              logger.warn(`Self-ping status: ${res.statusCode}`);
+            }
+          }).on('error', (err) => {
+            logger.error(`Self-ping failed: ${err.message}`);
+          });
+        }, 14 * 60 * 1000); // 14 minutes
+        
+        logger.info(`Self-ping scheduled for ${url} every 14 minutes`);
+      }
+    });
   } catch (err) {
     logger.error('Failed to start server:', err);
     process.exit(1);

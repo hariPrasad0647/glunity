@@ -118,11 +118,43 @@ const getSavedReels = async (userId) => {
   return reels.filter(Boolean).map((r) => formatReel(r));
 };
 
+const getMyLikedPosts = async (userId, { page = 1, limit = 12 } = {}) => {
+  const { getPostById, formatPost } = require('./post.service');
+  const offset = (page - 1) * limit;
+  const likes = await Like.findAll({
+    where: { userId, contentType: 'post' },
+    attributes: ['contentId'],
+    order: [['createdAt', 'DESC']],
+    offset,
+    limit,
+    raw: true,
+  });
+  const posts = await Promise.all(likes.map(({ contentId }) => getPostById(contentId)));
+  return posts.filter(Boolean).map((p) => formatPost(p));
+};
+
+const getMyLikedReels = async (userId, { page = 1, limit = 12 } = {}) => {
+  const { getReelById, formatReel } = require('../../reel/services/reel.service');
+  const offset = (page - 1) * limit;
+  const likes = await Like.findAll({
+    where: { userId, contentType: 'reel' },
+    attributes: ['contentId'],
+    order: [['createdAt', 'DESC']],
+    offset,
+    limit,
+    raw: true,
+  });
+  const reels = await Promise.all(likes.map(({ contentId }) => getReelById(contentId)));
+  return reels.filter(Boolean).map((r) => formatReel(r));
+};
+
 module.exports = {
   toggleLike,
   toggleBookmark,
   repostContent,
   getInteractionStats,
-  getBookmarkedPosts,
+  getSavedPosts: getBookmarkedPosts,
   getSavedReels,
+  getMyLikedPosts,
+  getMyLikedReels,
 };

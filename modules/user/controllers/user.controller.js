@@ -19,7 +19,8 @@ const {
   getUserReels,
   getMyProfile,
 } = require('../services/user.service');
-const { getSavedPosts, getSavedReels } = require('../../post/services/interaction.service');
+const { getSavedPosts, getSavedReels, getMyLikedPosts, getMyLikedReels } = require('../../post/services/interaction.service');
+const { getMyComments } = require('../../reply/services/reply.service');
 const { success, error } = require('../../../utils/response');
 
 const updateProfileController = async (req, res, next) => {
@@ -174,6 +175,39 @@ const getSavedReelsController = async (req, res, next) => {
   }
 };
 
+const getMyLikedPostsController = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const posts = await getMyLikedPosts(req.user.id, { page, limit });
+    return success(res, 200, 'Liked posts fetched', { posts });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getMyLikedReelsController = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const reels = await getMyLikedReels(req.user.id, { page, limit });
+    return success(res, 200, 'Liked reels fetched', { reels });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getMyCommentsController = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const result = await getMyComments(req.user.id, { page, limit });
+    return success(res, 200, 'Comments fetched', result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 const getMeController = async (req, res, next) => {
   try {
     const postLimit = parseInt(req.query.postLimit) || 12;
@@ -308,4 +342,7 @@ module.exports = {
   getMeController,
   getMyPostsController,
   getMyReelsController,
+  getMyLikedPostsController,
+  getMyLikedReelsController,
+  getMyCommentsController,
 };

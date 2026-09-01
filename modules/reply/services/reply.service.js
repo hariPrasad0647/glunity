@@ -166,6 +166,26 @@ const toggleReplyLike = async (userId, replyId) => {
 const getReplyCount = async (contentType, contentId) =>
   Reply.count({ where: { contentType, contentId, parentId: null, isDeleted: false } });
 
+const getMyComments = async (userId, { page = 1, limit = 20 } = {}) => {
+  const offset = (Number(page) - 1) * Number(limit);
+  const { count, rows } = await Reply.findAndCountAll({
+    where: { userId, isDeleted: false },
+    include: [{ model: User, as: 'author', attributes: ['id', 'username', 'profileImage'] }],
+    order: [['createdAt', 'DESC']],
+    limit: Number(limit),
+    offset,
+  });
+
+  const replies = await Promise.all(
+    rows.map(async (c) => {
+      const stats = await getReplyStats(c.id, userId);
+      return formatReply(c, stats);
+    })
+  );
+
+  return { replies, total: count, page: Number(page), limit: Number(limit) };
+};
+
 module.exports = {
   addReply,
   getReplies,
@@ -173,4 +193,5 @@ module.exports = {
   deleteReply,
   toggleReplyLike,
   getReplyCount,
+  getMyComments,
 };

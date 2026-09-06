@@ -44,6 +44,14 @@ const start = async () => {
     app.set('io', io);
 
     await sequelize.authenticate();
+    
+    // Workaround for TiDB/MySQL issue: cannot add column and foreign key constraint in the same ALTER statement
+    try {
+      await sequelize.query('ALTER TABLE `messages` ADD COLUMN `replyToId` CHAR(36) BINARY');
+    } catch (e) {
+      // Ignore error if column already exists
+    }
+
     await sequelize.sync({ alter: true });
     logger.info('Database connected');
 

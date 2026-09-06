@@ -12,9 +12,9 @@ const createReelController = async (req, res, next) => {
     if (!req.reelUpload || !req.reelUpload.videoUrl) {
       return error(res, 400, 'A video file is required');
     }
-    const { caption, isPrivate } = req.body;
+    const { caption } = req.body;
     const { videoUrl, thumbnailUrl } = req.reelUpload;
-    const reel = await createReel(req.user.id, { caption, isPrivate }, videoUrl, thumbnailUrl);
+    const reel = await createReel(req.user.id, { caption }, videoUrl, thumbnailUrl);
     return success(res, 201, 'Reel created successfully', reel);
   } catch (err) {
     next(err);
@@ -36,9 +36,6 @@ const getReelController = async (req, res, next) => {
   try {
     const reel = await getReelById(req.params.id);
     if (!reel) return error(res, 404, 'Reel not found');
-    if (reel.isPrivate && reel.userId !== req.user.id) {
-      return error(res, 403, 'This reel is private');
-    }
     const stats = await getInteractionStats('reel', req.params.id, req.user.id);
     return success(res, 200, 'Reel fetched successfully', formatReel(reel, stats));
   } catch (err) {

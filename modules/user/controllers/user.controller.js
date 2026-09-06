@@ -2,11 +2,8 @@ const {
   updateProfile,
   saveInterests,
   getInterests,
-  sendFollowRequest,
-  acceptFollowRequest,
-  rejectFollowRequest,
+  followUser,
   unfollow,
-  getFollowRequests,
   getFollowers,
   getFollowing,
   getUserFollowers,
@@ -25,14 +22,13 @@ const { success, error } = require('../../../utils/response');
 
 const updateProfileController = async (req, res, next) => {
   try {
-    const { fullName, username, bio, profession, isPrivate } = req.body;
+    const { fullName, username, bio, profession } = req.body;
 
     const fields = {};
     if (fullName !== undefined) fields.fullName = fullName;
     if (username !== undefined) fields.username = username;
     if (bio !== undefined) fields.bio = bio;
     if (profession !== undefined) fields.profession = profession;
-    if (isPrivate !== undefined) fields.isPrivate = isPrivate;
 
     const user = await updateProfile(req.user.id, fields, req.file, req.bannerUpload);
 
@@ -44,7 +40,6 @@ const updateProfileController = async (req, res, next) => {
       phone: user.phone,
       bio: user.bio,
       profession: user.profession,
-      isPrivate: user.isPrivate,
       profileImage: user.profileImage || null,
       bannerImage: user.bannerImage || null,
       bannerVideo: user.bannerVideo || null,
@@ -76,8 +71,8 @@ const getInterestsController = async (req, res, next) => {
 
 const followController = async (req, res, next) => {
   try {
-    await sendFollowRequest(req.user.id, req.params.id);
-    return success(res, 200, 'Follow request sent');
+    await followUser(req.user.id, req.params.id);
+    return success(res, 200, 'Followed successfully');
   } catch (err) {
     if (err.status) return error(res, err.status, err.message);
     next(err);
@@ -94,34 +89,7 @@ const unfollowController = async (req, res, next) => {
   }
 };
 
-const acceptFollowController = async (req, res, next) => {
-  try {
-    await acceptFollowRequest(req.user.id, req.params.id);
-    return success(res, 200, 'Follow request accepted');
-  } catch (err) {
-    if (err.status) return error(res, err.status, err.message);
-    next(err);
-  }
-};
 
-const rejectFollowController = async (req, res, next) => {
-  try {
-    await rejectFollowRequest(req.user.id, req.params.id);
-    return success(res, 200, 'Follow request rejected');
-  } catch (err) {
-    if (err.status) return error(res, err.status, err.message);
-    next(err);
-  }
-};
-
-const getFollowRequestsController = async (req, res, next) => {
-  try {
-    const requests = await getFollowRequests(req.user.id);
-    return success(res, 200, 'Follow requests fetched', { requests });
-  } catch (err) {
-    next(err);
-  }
-};
 
 const getFollowersController = async (req, res, next) => {
   try {
@@ -249,7 +217,6 @@ const getMyReelsController = async (req, res, next) => {
 const getUserFollowersController = async (req, res, next) => {
   try {
     const result = await getUserFollowers(req.user.id, req.params.id);
-    if (!result.canView) return error(res, 403, 'This account is private');
     return success(res, 200, 'Followers fetched', result);
   } catch (err) {
     if (err.status) return error(res, err.status, err.message);
@@ -260,7 +227,6 @@ const getUserFollowersController = async (req, res, next) => {
 const getUserFollowingController = async (req, res, next) => {
   try {
     const result = await getUserFollowing(req.user.id, req.params.id);
-    if (!result.canView) return error(res, 403, 'This account is private');
     return success(res, 200, 'Following fetched', result);
   } catch (err) {
     if (err.status) return error(res, err.status, err.message);
@@ -295,9 +261,6 @@ const getUserPostsController = async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
     const result = await getUserPosts(req.user.id, req.params.id, { page, limit });
-    if (!result.canView) {
-      return error(res, 403, 'This account is private');
-    }
     return success(res, 200, 'Posts fetched', result);
   } catch (err) {
     if (err.status) return error(res, err.status, err.message);
@@ -310,9 +273,6 @@ const getUserReelsController = async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
     const result = await getUserReels(req.user.id, req.params.id, { page, limit });
-    if (!result.canView) {
-      return error(res, 403, 'This account is private');
-    }
     return success(res, 200, 'Reels fetched', result);
   } catch (err) {
     if (err.status) return error(res, err.status, err.message);
@@ -326,9 +286,6 @@ module.exports = {
   getInterestsController,
   followController,
   unfollowController,
-  acceptFollowController,
-  rejectFollowController,
-  getFollowRequestsController,
   getFollowersController,
   getFollowingController,
   getFriendsController,

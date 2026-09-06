@@ -21,16 +21,17 @@ const Post = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    isPrivate: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    },
+
     quotedPostId: {
       type: DataTypes.UUID,
       allowNull: true,
       references: { model: 'posts', key: 'id' },
       onDelete: 'SET NULL',
+    },
+    isDeleted: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     likeCount: {
       type: DataTypes.INTEGER,

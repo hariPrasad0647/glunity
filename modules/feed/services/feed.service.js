@@ -52,7 +52,7 @@ const getFeed = async (userId, { page = 1, limit = 20 } = {}) => {
   const fetchLimit = limit * FETCH_MULTIPLIER;
 
   const [followingRows, interestRows] = await Promise.all([
-    Follow.findAll({ where: { followerId: userId, status: 'accepted' }, attributes: ['followingId'], raw: true }),
+    Follow.findAll({ where: { followerId: userId }, attributes: ['followingId'], raw: true }),
     Interest.findAll({ where: { userId }, attributes: ['interest'], raw: true }),
   ]);
 
@@ -60,7 +60,7 @@ const getFeed = async (userId, { page = 1, limit = 20 } = {}) => {
   const followingSet = new Set(followingIds);
   const userInterests = new Set(interestRows.map((i) => i.interest.toLowerCase()));
 
-  const baseWhere = { createdAt: { [Op.gte]: since }, isPrivate: false };
+  const baseWhere = { createdAt: { [Op.gte]: since } };
 
   let posts = [], reels = [];
   if (followingIds.length > 0) {
@@ -214,18 +214,18 @@ const getHomeFeed = async (userId, { page = 1, limit = 10 } = {}) => {
     ]);
     const items = (await attachHomeStats(userId, posts, reels)).slice(0, limit).map((item) => ({ ...item, isOwn: true }));
 
-    const followingCount = await Follow.count({ where: { followerId: userId, status: 'accepted' } });
+    const followingCount = await Follow.count({ where: { followerId: userId } });
 
     return { feed: items, page, limit, hasMore: followingCount > 0 };
   }
 
-  const followingRows = await Follow.findAll({ where: { followerId: userId, status: 'accepted' }, attributes: ['followingId'], raw: true });
+  const followingRows = await Follow.findAll({ where: { followerId: userId }, attributes: ['followingId'], raw: true });
   const followingIds = followingRows.map((f) => f.followingId);
   if (followingIds.length === 0) return { feed: [], page, limit, hasMore: false };
 
   const offset = (page - 2) * limit;
   const fetchLimit = offset + limit * HOME_FETCH_MULTIPLIER;
-  const where = { userId: { [Op.in]: followingIds }, isPrivate: false };
+  const where = { userId: { [Op.in]: followingIds } };
 
   const [posts, reels] = await Promise.all([
     Post.findAll({ where, include: postIncludes, order: [['createdAt', 'DESC']], limit: fetchLimit }),

@@ -9,11 +9,11 @@ const { success, error } = require('../../../utils/response');
 
 const createPostController = async (req, res, next) => {
   try {
-    const { content, isPrivate } = req.body;
+    const { content } = req.body;
     if ((!req.cdnUrls || req.cdnUrls.length === 0) && (!content || content.trim() === '')) {
       return error(res, 400, 'Post must contain text or media');
     }
-    const post = await createPost(req.user.id, { content, isPrivate }, req.cdnUrls || []);
+    const post = await createPost(req.user.id, { content }, req.cdnUrls || []);
     return success(res, 201, 'Post created successfully', post);
   } catch (err) {
     next(err);
@@ -24,9 +24,6 @@ const getPostController = async (req, res, next) => {
   try {
     const post = await getPostById(req.params.id);
     if (!post) return error(res, 404, 'Post not found');
-    if (post.isPrivate && post.userId !== req.user.id) {
-      return error(res, 403, 'This post is private');
-    }
     const stats = await getInteractionStats('post', req.params.id, req.user.id);
     return success(res, 200, 'Post fetched successfully', formatPost(post, stats));
   } catch (err) {

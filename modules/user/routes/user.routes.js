@@ -12,9 +12,7 @@ const {
   getInterestsController,
   followController,
   unfollowController,
-  acceptFollowController,
-  rejectFollowController,
-  getFollowRequestsController,
+
   getFollowersController,
   getFollowingController,
   getFriendsController,
@@ -52,16 +50,7 @@ router.post('/interests', auth, saveInterestsValidator, validate, saveInterestsC
 // GET /api/users/interests
 router.get('/interests', auth, getInterestsController);
 
-// ── Follow requests (specific routes before /:id to avoid conflicts) ──────────
 
-// GET  /api/users/follow-requests          — incoming pending requests
-router.get('/follow-requests', auth, getFollowRequestsController);
-
-// PATCH /api/users/follow-requests/:id/accept  — accept request from user :id
-router.patch('/follow-requests/:id/accept', auth, uuidParam('id'), validate, acceptFollowController);
-
-// PATCH /api/users/follow-requests/:id/reject  — reject request from user :id
-router.patch('/follow-requests/:id/reject', auth, uuidParam('id'), validate, rejectFollowController);
 
 // ── Follower / following / friends lists ──────────────────────────────────────
 

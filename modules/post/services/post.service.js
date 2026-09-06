@@ -18,7 +18,6 @@ const extractMentions = (text) => {
 const formatPost = (post, stats = {}) => ({
   id: post.id,
   content: post.content,
-  isPrivate: post.isPrivate,
   createdAt: post.createdAt,
   author: {
     id: post.author.id,
@@ -59,8 +58,8 @@ const getPostById = async (postId) => {
   return post;
 };
 
-const createPost = async (userId, { content, isPrivate = false }, cdnUrls = []) => {
-  const post = await Post.create({ userId, content: content || null, isPrivate });
+const createPost = async (userId, { content }, cdnUrls = []) => {
+  const post = await Post.create({ userId, content: content || null });
 
   // Store media in order
   await PostMedia.bulkCreate(

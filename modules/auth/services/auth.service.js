@@ -63,7 +63,6 @@ const buildAuthResponse = (user) => {
       username: user.username,
       email: user.email,
       phone: user.phone,
-      isPrivate: user.isPrivate,
     },
     accessToken,
     refreshToken,

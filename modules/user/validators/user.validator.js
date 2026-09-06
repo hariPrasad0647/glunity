@@ -25,11 +25,7 @@ const updateProfileValidator = [
     .isLength({ max: 100 })
     .withMessage('Profession must not exceed 100 characters'),
 
-  body('isPrivate')
-    .optional()
-    .isBoolean({ strict: false })
-    .withMessage('isPrivate must be true or false')
-    .toBoolean(),
+
 ];
 
 const saveInterestsValidator = [

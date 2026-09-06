@@ -22,7 +22,6 @@ const formatReel = (reel, stats = {}) => ({
   videoUrl: reel.videoUrl,
   thumbnailUrl: reel.thumbnailUrl || null,
   caption: reel.caption,
-  isPrivate: reel.isPrivate,
   createdAt: reel.createdAt,
   author: {
     id: reel.author.id,
@@ -60,13 +59,12 @@ const getReelById = async (reelId) => {
   });
 };
 
-const createReel = async (userId, { caption, isPrivate = false }, videoUrl, thumbnailUrl) => {
+const createReel = async (userId, { caption }, videoUrl, thumbnailUrl) => {
   const reel = await Reel.create({
     userId,
     videoUrl,
     thumbnailUrl: thumbnailUrl || null,
     caption: caption || null,
-    isPrivate,
   });
 
   if (caption) {
@@ -99,13 +97,11 @@ const getPublicReelsFeed = async (viewerId, { page = 1, limit = 10 } = {}) => {
   const offset = (page - 1) * limit;
 
   const { count, rows: reels } = await Reel.findAndCountAll({
-    where: { isPrivate: false },
     include: [
       {
         model: User,
         as: 'author',
         attributes: ['id', 'username', 'fullName', 'profileImage'],
-        where: { isPrivate: false },
       },
       { model: Hashtag, as: 'hashtags', attributes: ['name'], through: { attributes: [] } },
       {

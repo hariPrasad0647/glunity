@@ -23,11 +23,6 @@ const Follow = sequelize.define(
       references: { model: 'users', key: 'id' },
       onDelete: 'CASCADE',
     },
-    status: {
-      type: DataTypes.ENUM('pending', 'accepted', 'rejected'),
-      allowNull: false,
-      defaultValue: 'pending',
-    },
   },
   {
     tableName: 'follows',

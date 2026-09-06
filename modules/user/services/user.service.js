@@ -93,7 +93,7 @@ const throwErr = (status, message) => {
   throw err;
 };
 
-const sendFollowRequest = async (requesterId, targetId) => {
+const followUser = async (requesterId, targetId) => {
   if (requesterId === targetId) throwErr(400, "You can't follow yourself");
 
   const target = await User.findByPk(targetId);
@@ -102,52 +102,25 @@ const sendFollowRequest = async (requesterId, targetId) => {
   const existing = await Follow.findOne({ where: { followerId: requesterId, followingId: targetId } });
 
   if (existing) {
-    if (existing.status === 'accepted') throwErr(409, 'Already following this user');
-    if (existing.status === 'pending') throwErr(409, 'Follow request already sent');
-    // re-request after rejection
-    await existing.update({ status: target.isPrivate ? 'pending' : 'accepted' });
-    return existing;
+    throwErr(409, 'Already following this user');
   }
 
   return Follow.create({
     followerId: requesterId,
     followingId: targetId,
-    status: target.isPrivate ? 'pending' : 'accepted',
   });
 };
 
-const acceptFollowRequest = async (userId, requesterId) => {
-  const follow = await Follow.findOne({
-    where: { followerId: requesterId, followingId: userId, status: 'pending' },
-  });
-  if (!follow) throwErr(404, 'Pending follow request not found');
-  await follow.update({ status: 'accepted' });
-};
 
-const rejectFollowRequest = async (userId, requesterId) => {
-  const deleted = await Follow.destroy({
-    where: { followerId: requesterId, followingId: userId, status: 'pending' },
-  });
-  if (!deleted) throwErr(404, 'Pending follow request not found');
-};
 
 const unfollow = async (requesterId, targetId) => {
   const deleted = await Follow.destroy({ where: { followerId: requesterId, followingId: targetId } });
   if (!deleted) throwErr(404, 'You are not following this user');
 };
 
-const getFollowRequests = async (userId) => {
-  const rows = await Follow.findAll({
-    where: { followingId: userId, status: 'pending' },
-    include: [{ model: User, as: 'follower', attributes: FOLLOWER_ATTRS }],
-    order: [['createdAt', 'DESC']],
-  });
-  return rows.map((r) => r.follower);
-};
-
 const getFollowers = async (userId) => {
   const rows = await Follow.findAll({
-    where: { followingId: userId, status: 'accepted' },
+    where: { followingId: userId },
     include: [{ model: User, as: 'follower', attributes: FOLLOWER_ATTRS }],
   });
   return rows.map((r) => r.follower);
@@ -155,7 +128,7 @@ const getFollowers = async (userId) => {
 
 const getFollowing = async (userId) => {
   const rows = await Follow.findAll({
-    where: { followerId: userId, status: 'accepted' },
+    where: { followerId: userId },
     include: [{ model: User, as: 'following', attributes: FOLLOWER_ATTRS }],
   });
   return rows.map((r) => r.following);
@@ -164,28 +137,22 @@ const getFollowing = async (userId) => {
 // ── Followers / following for an arbitrary profile (privacy-aware) ────────────
 
 const getUserFollowers = async (viewerId, targetId) => {
-  const target = await User.findByPk(targetId, { attributes: ['id', 'isPrivate'] });
+  const target = await User.findByPk(targetId, { attributes: ['id'] });
   if (!target) throwErr(404, 'User not found');
 
-  const allowed = await canViewContent(viewerId, target);
-  if (!allowed) return { canView: false, followers: [] };
-
   const rows = await Follow.findAll({
-    where: { followingId: targetId, status: 'accepted' },
+    where: { followingId: targetId },
     include: [{ model: User, as: 'follower', attributes: FOLLOWER_ATTRS }],
   });
   return { canView: true, followers: rows.map((r) => r.follower) };
 };
 
 const getUserFollowing = async (viewerId, targetId) => {
-  const target = await User.findByPk(targetId, { attributes: ['id', 'isPrivate'] });
+  const target = await User.findByPk(targetId, { attributes: ['id'] });
   if (!target) throwErr(404, 'User not found');
 
-  const allowed = await canViewContent(viewerId, target);
-  if (!allowed) return { canView: false, following: [] };
-
   const rows = await Follow.findAll({
-    where: { followerId: targetId, status: 'accepted' },
+    where: { followerId: targetId },
     include: [{ model: User, as: 'following', attributes: FOLLOWER_ATTRS }],
   });
   return { canView: true, following: rows.map((r) => r.following) };
@@ -194,7 +161,7 @@ const getUserFollowing = async (viewerId, targetId) => {
 const getFriends = async (userId) => {
   // Users I follow
   const myFollowing = await Follow.findAll({
-    where: { followerId: userId, status: 'accepted' },
+    where: { followerId: userId },
     attributes: ['followingId'],
     raw: true,
   });
@@ -203,7 +170,7 @@ const getFriends = async (userId) => {
 
   // Of those, who also follows me back
   const mutuals = await Follow.findAll({
-    where: { followerId: { [Op.in]: followingIds }, followingId: userId, status: 'accepted' },
+    where: { followerId: { [Op.in]: followingIds }, followingId: userId },
     include: [{ model: User, as: 'follower', attributes: FOLLOWER_ATTRS }],
   });
   return mutuals.map((f) => f.follower);
@@ -216,24 +183,24 @@ const SENTINEL = '00000000-0000-0000-0000-000000000000';
 const safeNotIn = (arr) => (arr.length ? arr : [SENTINEL]);
 
 const getSuggestions = async (userId, limit = 20) => {
-  // Who I follow (accepted)
+  // Who I follow
   const iFollowRows = await Follow.findAll({
-    where: { followerId: userId, status: 'accepted' },
+    where: { followerId: userId },
     attributes: ['followingId'],
     raw: true,
   });
   const iFollowIds = iFollowRows.map((f) => f.followingId);
   const iFollowSet = new Set(iFollowIds);
 
-  // Who follows me (accepted)
+  // Who follows me
   const followMeRows = await Follow.findAll({
-    where: { followingId: userId, status: 'accepted' },
+    where: { followingId: userId },
     attributes: ['followerId'],
     raw: true,
   });
   const followMeIds = followMeRows.map((f) => f.followerId);
 
-  // Mutual accepted follows = friends
+  // Mutual follows = friends
   const myFriendIds = followMeIds.filter((id) => iFollowSet.has(id));
 
   // Every user ID I have ANY follow row with (any direction, any status)
@@ -263,13 +230,12 @@ const getSuggestions = async (userId, limit = 20) => {
     : [];
 
   // ── 2nd degree ─────────────────────────────────────────────────────────────
-  // People my friends follow (accepted), not in any of my existing connections
+  // People my friends follow, not in any of my existing connections
   let secondDegree = [];
   if (myFriendIds.length) {
     const fofRows = await Follow.findAll({
       where: {
         followerId: { [Op.in]: myFriendIds },
-        status: 'accepted',
         followingId: { [Op.notIn]: safeNotIn([...allConnectedIds]) },
       },
       attributes: ['followingId', 'followerId'],
@@ -306,7 +272,6 @@ const getSuggestions = async (userId, limit = 20) => {
     const tofRows = await Follow.findAll({
       where: {
         followerId: { [Op.in]: secondDegreeIds },
-        status: 'accepted',
         followingId: { [Op.notIn]: safeNotIn([...thirdExcludeIds]) },
       },
       attributes: ['followingId', 'followerId'],
@@ -340,20 +305,14 @@ const getSuggestions = async (userId, limit = 20) => {
 
 const isFollowing = async (viewerId, targetId) => {
   const row = await Follow.findOne({
-    where: { followerId: viewerId, followingId: targetId, status: 'accepted' },
+    where: { followerId: viewerId, followingId: targetId },
   });
   return !!row;
 };
 
-const canViewContent = async (viewerId, target) => {
-  if (viewerId === target.id) return true;
-  if (!target.isPrivate) return true;
-  return isFollowing(viewerId, target.id);
-};
-
 const getUserProfile = async (viewerId, targetId) => {
   const target = await User.findByPk(targetId, {
-    attributes: ['id', 'username', 'fullName', 'bio', 'profession', 'profileImage', 'bannerImage', 'bannerVideo', 'isPrivate', 'createdAt'],
+    attributes: ['id', 'username', 'fullName', 'bio', 'profession', 'profileImage', 'bannerImage', 'bannerVideo', 'createdAt'],
   });
   if (!target) throwErr(404, 'User not found');
 
@@ -362,15 +321,14 @@ const getUserProfile = async (viewerId, targetId) => {
   const [postCount, reelCount, followerCount, followingCount, followRow] = await Promise.all([
     Post.count({ where: { userId: targetId } }),
     Reel.count({ where: { userId: targetId } }),
-    Follow.count({ where: { followingId: targetId, status: 'accepted' } }),
-    Follow.count({ where: { followerId: targetId, status: 'accepted' } }),
+    Follow.count({ where: { followingId: targetId } }),
+    Follow.count({ where: { followerId: targetId } }),
     isOwn ? null : Follow.findOne({ where: { followerId: viewerId, followingId: targetId } }),
   ]);
 
   let followStatus = null;
   if (!isOwn) {
-    if (followRow?.status === 'accepted') followStatus = 'following';
-    else if (followRow?.status === 'pending') followStatus = 'pending';
+    if (followRow) followStatus = 'following';
     else followStatus = 'none';
   }
 
@@ -397,7 +355,7 @@ const searchUsers = async (viewerId, query, { page = 1, limit = 20 } = {}) => {
         sequelizeWhere(fn('LOWER', col('fullName')), { [Op.like]: q }),
       ],
     },
-    attributes: ['id', 'username', 'fullName', 'profileImage', 'isPrivate'],
+    attributes: ['id', 'username', 'fullName', 'profileImage'],
     order: [['username', 'ASC']],
     limit,
     offset,
@@ -407,17 +365,16 @@ const searchUsers = async (viewerId, query, { page = 1, limit = 20 } = {}) => {
   const followRows = userIds.length
     ? await Follow.findAll({
         where: { followerId: viewerId, followingId: { [Op.in]: userIds } },
-        attributes: ['followingId', 'status'],
+        attributes: ['followingId'],
         raw: true,
       })
     : [];
-  const followStatusMap = Object.fromEntries(followRows.map((f) => [f.followingId, f.status]));
+  const followStatusMap = Object.fromEntries(followRows.map((f) => [f.followingId, true]));
 
   const users = rows.map((u) => {
-    const status = followStatusMap[u.id];
     return {
       ...u.toJSON(),
-      followStatus: status === 'accepted' ? 'following' : status === 'pending' ? 'pending' : 'none',
+      followStatus: followStatusMap[u.id] ? 'following' : 'none',
     };
   });
 
@@ -425,11 +382,8 @@ const searchUsers = async (viewerId, query, { page = 1, limit = 20 } = {}) => {
 };
 
 const getUserPosts = async (viewerId, targetId, { page = 1, limit = 12 } = {}) => {
-  const target = await User.findByPk(targetId, { attributes: ['id', 'isPrivate'] });
+  const target = await User.findByPk(targetId, { attributes: ['id'] });
   if (!target) throwErr(404, 'User not found');
-
-  const allowed = await canViewContent(viewerId, target);
-  if (!allowed) return { canView: false, posts: [], total: 0, page, limit };
 
   const offset = (page - 1) * limit;
 
@@ -473,7 +427,6 @@ const getUserPosts = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
     type: 'post',
     id: post.id,
     content: post.content,
-    isPrivate: post.isPrivate,
     createdAt: post.createdAt,
     author: { id: post.author.id, username: post.author.username, fullName: post.author.fullName, profileImage: post.author.profileImage || null },
     media: post.media.sort((a, b) => a.order - b.order).map((m) => m.mediaUrl),
@@ -491,11 +444,8 @@ const getUserPosts = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
 };
 
 const getUserReels = async (viewerId, targetId, { page = 1, limit = 12 } = {}) => {
-  const target = await User.findByPk(targetId, { attributes: ['id', 'isPrivate'] });
+  const target = await User.findByPk(targetId, { attributes: ['id'] });
   if (!target) throwErr(404, 'User not found');
-
-  const allowed = await canViewContent(viewerId, target);
-  if (!allowed) return { canView: false, reels: [], total: 0, page, limit };
 
   const offset = (page - 1) * limit;
 
@@ -540,7 +490,6 @@ const getUserReels = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
     videoUrl: reel.videoUrl,
     thumbnailUrl: reel.thumbnailUrl || null,
     caption: reel.caption,
-    isPrivate: reel.isPrivate,
     createdAt: reel.createdAt,
     author: { id: reel.author.id, username: reel.author.username, fullName: reel.author.fullName, profileImage: reel.author.profileImage || null },
     hashtags: reel.hashtags.map((h) => h.name),
@@ -574,11 +523,8 @@ module.exports = {
   updateProfile,
   saveInterests,
   getInterests,
-  sendFollowRequest,
-  acceptFollowRequest,
-  rejectFollowRequest,
+  followUser,
   unfollow,
-  getFollowRequests,
   getFollowers,
   getFollowing,
   getUserFollowers,

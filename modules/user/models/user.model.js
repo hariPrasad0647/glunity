@@ -19,7 +19,6 @@ const User = sequelize.define(
     },
     phone: { type: DataTypes.STRING, allowNull: true },
     isVerified: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
-    isPrivate: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     profileImage: { type: DataTypes.STRING, allowNull: true },
     bannerImage: { type: DataTypes.STRING, allowNull: true },
     bannerVideo: { type: DataTypes.STRING, allowNull: true },

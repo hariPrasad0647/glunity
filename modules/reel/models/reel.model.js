@@ -29,7 +29,7 @@ const Reel = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    isPrivate: {
+    isDeleted: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,

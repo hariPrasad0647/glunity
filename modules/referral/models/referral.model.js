@@ -17,7 +17,7 @@ const Referral = sequelize.define(
     referredUserId: {
       type: DataTypes.UUID,
       allowNull: false,
-      unique: true, // One referral per referred user
+      // One referral per referred user (handled by index)
     },
     referralCode: {
       type: DataTypes.STRING,
@@ -60,6 +60,7 @@ const Referral = sequelize.define(
     timestamps: true,
     indexes: [
       { fields: ['referrerId'] },
+      { unique: true, fields: ['referredUserId'] },
       { fields: ['referralCode'] },
       { fields: ['status'] },
       { fields: ['createdAt'] },

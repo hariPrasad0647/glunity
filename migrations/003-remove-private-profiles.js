@@ -40,7 +40,7 @@ if (require.main === module) {
       await module.exports.up();
       console.log('✅  Migration UP: Removed isPrivate and follow status');
     } catch (err) {
-      console.error('❌  Migration failed:', err.message);
+      console.error('❌  Migration failed:', err);
     } finally {
       await sequelize.close();
     }

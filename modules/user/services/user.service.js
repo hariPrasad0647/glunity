@@ -13,6 +13,7 @@ const Like = require('../../post/models/like.model');
 const Bookmark = require('../../post/models/bookmark.model');
 const Repost = require('../../post/models/repost.model');
 const Reply = require('../../reply/models/reply.model');
+const { awardProfileSetup } = require('../../points/services/points.service');
 
 const FOLLOWER_ATTRS = ['id', 'username', 'fullName', 'profileImage'];
 
@@ -57,6 +58,13 @@ const updateProfile = async (userId, fields, imageFile, bannerUpload) => {
   }
 
   await user.update(fields);
+
+  // Award PROFILE_SETUP points the first time a user sets their profile image
+  // The idempotencyKey PROFILE_SETUP:{userId} guarantees this is a one-time award
+  if (user.profileImage) {
+    awardProfileSetup(userId).catch(() => {});
+  }
+
   return user;
 };
 

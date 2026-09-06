@@ -39,41 +39,59 @@ const handleMulterError = (err, res, { videoMode = false, expectedFields = [] } 
   return error(res, 400, err.message);
 };
 
-// ── Profile image ─────────────────────────────────────────────────────────────
+// ── Profile media (avatar + banner in one pass) ───────────────────────────────
+// Uses .fields() so both profileImage and banner are parsed from the same
+// multipart body. Chaining two separate single() calls does NOT work because
+// the first multer middleware consumes the entire request body.
 
-const uploadProfileImage = (req, res, next) => {
-  imageUpload.single('profileImage')(req, res, async (err) => {
-    if (err) return handleMulterError(err, res, { expectedFields: ['profileImage'] });
-    if (!req.file) return next();
+const profileMediaUpload = createUpload(
+  [...IMAGE_EXTS, ...VIDEO_EXTS],
+  parseInt(process.env.MAX_BANNER_SIZE) || 52428800 // 50 MB covers both fields
+);
+
+const uploadProfileMedia = (req, res, next) => {
+  profileMediaUpload.fields([
+    { name: 'profileImage', maxCount: 1 },
+    { name: 'banner', maxCount: 1 },
+  ])(req, res, async (err) => {
+    if (err) return handleMulterError(err, res, { videoMode: true, expectedFields: ['profileImage', 'banner'] });
+
+    const files = req.files || {};
+
     try {
-      const ext = path.extname(req.file.originalname).toLowerCase();
-      const filename = `${req.user.id}_${Date.now()}${ext}`;
-      req.file.cdnUrl = await uploadToBunny(req.file.buffer, `profile-images/${filename}`);
+      const timestamp = Date.now();
+
+      // ── Profile avatar (images only) ────────────────────────────────────────
+      if (files.profileImage && files.profileImage[0]) {
+        const imgFile = files.profileImage[0];
+        const ext = path.extname(imgFile.originalname).toLowerCase();
+        if (!IMAGE_EXTS.includes(ext)) {
+          return error(res, 400, `Unsupported profile image type "${ext}". Allowed: ${IMAGE_EXTS.join(', ')}`);
+        }
+        if (imgFile.size > (parseInt(process.env.MAX_FILE_SIZE) || 5242880)) {
+          return error(res, 413, 'Profile image too large. Maximum allowed size is 5MB');
+        }
+        const filename = `${req.user.id}_${timestamp}${ext}`;
+        imgFile.cdnUrl = await uploadToBunny(imgFile.buffer, `profile-images/${filename}`);
+        // Attach to req.file for backward-compat with the service layer
+        req.file = imgFile;
+      }
+
+      // ── Profile banner (image or video) ────────────────────────────────────
+      if (files.banner && files.banner[0]) {
+        const bannerFile = files.banner[0];
+        const ext = path.extname(bannerFile.originalname).toLowerCase();
+        const isVideo = VIDEO_EXTS.includes(ext);
+        const folder = isVideo ? 'profile-banners/videos' : 'profile-banners/images';
+        const filename = `${req.user.id}_${timestamp}${ext}`;
+        const bannerUrl = await uploadToBunny(bannerFile.buffer, `${folder}/${filename}`);
+        req.bannerUpload = { bannerUrl, bannerType: isVideo ? 'video' : 'image' };
+      }
+
       next();
     } catch (uploadErr) {
-      logger.error('uploadProfileImage failed:', uploadErr);
-      return error(res, 500, 'Failed to upload image. Please try again.');
-    }
-  });
-};
-
-// ── Profile banner (image or video) ─────────────────────────────────────────
-
-const uploadProfileBanner = (req, res, next) => {
-  bannerUpload.single('banner')(req, res, async (err) => {
-    if (err) return handleMulterError(err, res, { videoMode: true, expectedFields: ['banner'] });
-    if (!req.file) return next();
-    try {
-      const ext = path.extname(req.file.originalname).toLowerCase();
-      const isVideo = VIDEO_EXTS.includes(ext);
-      const folder = isVideo ? 'profile-banners/videos' : 'profile-banners/images';
-      const filename = `${req.user.id}_${Date.now()}${ext}`;
-      const bannerUrl = await uploadToBunny(req.file.buffer, `${folder}/${filename}`);
-      req.bannerUpload = { bannerUrl, bannerType: isVideo ? 'video' : 'image' };
-      next();
-    } catch (uploadErr) {
-      logger.error('uploadProfileBanner failed:', uploadErr);
-      return error(res, 500, 'Failed to upload banner. Please try again.');
+      logger.error('uploadProfileMedia failed:', uploadErr);
+      return error(res, 500, 'Failed to upload profile media. Please try again.');
     }
   });
 };
@@ -238,8 +256,7 @@ const uploadContent = (req, res, next) => {
 };
 
 module.exports = {
-  uploadProfileImage,
-  uploadProfileBanner,
+  uploadProfileMedia,
   uploadPostImages,
   uploadReel,
   uploadChatMedia,

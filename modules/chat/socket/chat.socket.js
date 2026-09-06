@@ -1,5 +1,6 @@
 const { verifyAccessToken } = require('../../../config/jwt');
 const chatService = require('../services/chat.service');
+const { awardChatMessage } = require('../../points/services/points.service');
 
 module.exports = (io) => {
   // Authenticate socket connections via JWT in handshake
@@ -41,6 +42,12 @@ module.exports = (io) => {
           mediaItems: media,
           replyToId: replyToId || null,
         });
+
+        // Award CHAT_MESSAGE points after message is persisted to DB
+        // message.id is the idempotency key — Socket.IO reconnects cannot cause duplicates
+        if (message && message.id) {
+          awardChatMessage(senderId, message.id).catch(() => {});
+        }
 
         const payload = { conversationId: conversation.id, message };
 

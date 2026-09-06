@@ -4,6 +4,7 @@ const Repost = require('../models/repost.model');
 const Post = require('../models/post.model');
 const Reel = require('../../reel/models/reel.model');
 const Reply = require('../../reply/models/reply.model');
+const { awardReceivedLike, awardRepost } = require('../../points/services/points.service');
 
 const findContent = async (contentType, contentId) => {
   const model = contentType === 'post' ? Post : Reel;
@@ -19,7 +20,7 @@ const findContent = async (contentType, contentId) => {
 // ── Like ──────────────────────────────────────────────────────────────────────
 
 const toggleLike = async (userId, contentType, contentId) => {
-  await findContent(contentType, contentId);
+  const content = await findContent(contentType, contentId);
   const existing = await Like.findOne({ where: { userId, contentType, contentId } });
   if (existing) {
     await existing.destroy();
@@ -30,6 +31,12 @@ const toggleLike = async (userId, contentType, contentId) => {
   
   if (contentType === 'post') {
     await Post.update({ likeCount }, { where: { id: contentId } });
+  }
+
+  // Award RECEIVED_LIKE points to the content owner (not the liker)
+  // Only fires on a new like (not an unlike) — like/unlike/like = 1 award ever
+  if (!existing && content.userId && content.userId !== userId) {
+    awardReceivedLike(content.userId, contentId, userId).catch(() => {});
   }
   
   return { liked: !existing, likeCount };
@@ -60,11 +67,17 @@ const toggleBookmark = async (userId, contentType, contentId) => {
 
 const repostContent = async (userId, contentType, contentId) => {
   await findContent(contentType, contentId);
-  await Repost.findOrCreate({ where: { userId, contentType, contentId } });
+  const [, created] = await Repost.findOrCreate({ where: { userId, contentType, contentId } });
   const repostCount = await Repost.count({ where: { contentType, contentId } });
   
   if (contentType === 'post') {
     await Post.update({ repostCount }, { where: { id: contentId } });
+  }
+
+  // Award REPOST points only when a new repost row is created
+  // repost → undo → repost cycles are prevented by the Repost unique index
+  if (created) {
+    awardRepost(userId, contentId).catch(() => {});
   }
   
   return { repostCount };

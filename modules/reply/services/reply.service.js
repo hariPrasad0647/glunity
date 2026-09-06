@@ -3,6 +3,7 @@ const ReplyLike = require('../models/reply_like.model');
 const User = require('../../user/models/user.model');
 const Post = require('../../post/models/post.model');
 const Reel = require('../../reel/models/reel.model');
+const { awardComment } = require('../../points/services/points.service');
 
 const findContent = async (contentType, contentId) => {
   const model = contentType === 'post' ? Post : Reel;
@@ -74,6 +75,9 @@ const addReply = async (userId, contentType, contentId, text, parentId = null) =
 
   const reply = await Reply.create({ userId, contentType, contentId, text, parentId });
   
+  // Award COMMENT points after reply is successfully persisted
+  awardComment(userId, reply.id).catch(() => {});
+
   if (contentType === 'post' && !parentId) {
     const replyCount = await Reply.count({ where: { contentType: 'post', contentId, parentId: null, isDeleted: false } });
     await Post.update({ replyCount }, { where: { id: contentId } });

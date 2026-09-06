@@ -4,6 +4,7 @@ const PostMedia = require('../models/post_media.model');
 const Hashtag = require('../models/hashtag.model');
 const PostHashtag = require('../models/post_hashtag.model');
 const PostMention = require('../models/post_mention.model');
+const { awardQualityPost } = require('../../points/services/points.service');
 
 const extractHashtags = (text) => {
   const matches = text.match(/#([a-zA-Z0-9_]+)/g) || [];
@@ -90,7 +91,12 @@ const createPost = async (userId, { content }, cdnUrls = []) => {
     }
   }
 
-  return formatPost(await getPostById(post.id));
+  const formatted = formatPost(await getPostById(post.id));
+
+  // Award QUALITY_POST points — fires after full post is persisted
+  awardQualityPost(userId, post.id).catch(() => {});
+
+  return formatted;
 };
 
 const deletePost = async (userId, postId) => {

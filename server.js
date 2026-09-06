@@ -20,6 +20,9 @@ require('./modules/story/models/storyReaction.model');
 require('./modules/reply/models/reply.model');
 require('./modules/reply/models/reply_like.model');
 
+// Points models
+require('./modules/points/models/pointTransaction.model');
+
 const PORT = process.env.PORT || 5000;
 
 const start = async () => {

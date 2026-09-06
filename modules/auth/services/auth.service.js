@@ -4,6 +4,7 @@ const User = require('../../user/models/user.model');
 const Otp = require('../models/otp.model');
 const PendingSignup = require('../models/pending-signup.model');
 const AuthIdentity = require('../models/auth-identity.model');
+const Referral = require('../../referral/models/referral.model');
 const { generateOtp, hashOtp, compareOtp } = require('../../../utils/otp');
 const { sendOtpEmail } = require('../../../utils/email');
 const { signAccessToken, signRefreshToken } = require('../../../config/jwt');
@@ -30,6 +31,19 @@ const getActiveCooldown = async (email, purpose) => {
   if (!lastOtp) return 0;
   const elapsed = (Date.now() - new Date(lastOtp.createdAt).getTime()) / 1000;
   return elapsed < RESEND_COOLDOWN_SECONDS ? Math.ceil(RESEND_COOLDOWN_SECONDS - elapsed) : 0;
+};
+
+const generateUniqueReferralCode = async () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code;
+  let isUnique = false;
+  while (!isUnique) {
+    code = '';
+    for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+    const existing = await User.findOne({ where: { referralCode: code } });
+    if (!existing) isUnique = true;
+  }
+  return code;
 };
 
 const issueOtp = async (email, purpose) => {
@@ -69,7 +83,7 @@ const buildAuthResponse = (user) => {
   };
 };
 
-const signup = async ({ fullName, username, email, phone }) => {
+const signup = async ({ fullName, username, email, phone, referralCode }) => {
   // Block if a verified account already holds this email or username
   const verifiedUser = await User.findOne({
     where: { [Op.or]: [{ email }, { username }] },
@@ -85,6 +99,14 @@ const signup = async ({ fullName, username, email, phone }) => {
     throw new ApiError(429, `Please wait ${cooldown}s before requesting another code`);
   }
 
+  // Validate referral code if provided
+  if (referralCode) {
+    const referrer = await User.findOne({ where: { referralCode } });
+    if (!referrer) {
+      throw new ApiError(400, 'Invalid referral code');
+    }
+  }
+
   // Block if another *active* pending signup holds the same username under a different email
   const usernameConflict = await PendingSignup.findOne({
     where: { username, email: { [Op.ne]: email } },
@@ -98,7 +120,7 @@ const signup = async ({ fullName, username, email, phone }) => {
 
   // Store signup details temporarily — no user row yet
   const expiresAt = new Date(Date.now() + PENDING_TTL_SECONDS * 1000);
-  await PendingSignup.upsert({ fullName, username, email, phone, expiresAt });
+  await PendingSignup.upsert({ fullName, username, email, phone, expiresAt, referralCode });
 
   await issueOtp(email, OTP_PURPOSE_SIGNUP);
 
@@ -151,15 +173,30 @@ const verifyOtp = async (email, code) => {
   }
 
   // Atomically consume OTP, create the verified user, and delete the pending row
-  const { fullName, username, phone } = pending;
+  const { fullName, username, phone, referralCode } = pending;
+  const newReferralCode = await generateUniqueReferralCode();
 
   const user = await sequelize.transaction(async (t) => {
     await otp.update({ consumedAt: new Date() }, { transaction: t });
     const newUser = await User.create(
-      { fullName, username, email, phone, isVerified: true },
+      { fullName, username, email, phone, isVerified: true, referralCode: newReferralCode },
       { transaction: t }
     );
     await pending.destroy({ transaction: t });
+    
+    // Process referral
+    if (referralCode) {
+      const referrer = await User.findOne({ where: { referralCode }, transaction: t });
+      if (referrer && referrer.id !== newUser.id) {
+        await Referral.create({
+          referrerId: referrer.id,
+          referredUserId: newUser.id,
+          referralCode: referralCode,
+          status: 'PENDING'
+        }, { transaction: t });
+      }
+    }
+    
     return newUser;
   });
 
@@ -208,7 +245,7 @@ const verifyLogin = async (email, code) => {
   return buildAuthResponse(user);
 };
 
-const socialLogin = async ({ provider, providerUserId, email, fullName }) => {
+const socialLogin = async ({ provider, providerUserId, email, fullName, referralCode }) => {
   let identity = await AuthIdentity.findOne({
     where: { provider, providerUserId },
     include: [{ model: User, as: 'user' }],
@@ -228,6 +265,17 @@ const socialLogin = async ({ provider, providerUserId, email, fullName }) => {
     }
   }
 
+  // Validate referral code if provided
+  let validReferrer = null;
+  if (referralCode) {
+    validReferrer = await User.findOne({ where: { referralCode } });
+    if (!validReferrer) {
+      throw new ApiError(400, 'Invalid referral code');
+    }
+  }
+
+  const newReferralCode = await generateUniqueReferralCode();
+
   // Create new user & identity atomically
   const user = await sequelize.transaction(async (t) => {
     // Generate a unique username based on full name or random string
@@ -246,6 +294,7 @@ const socialLogin = async ({ provider, providerUserId, email, fullName }) => {
         email: email || `${providerUserId}@${provider.toLowerCase()}.local`,
         phone: null, // Phone is now nullable
         isVerified: true, // Social accounts are pre-verified
+        referralCode: newReferralCode,
       },
       { transaction: t }
     );
@@ -259,6 +308,16 @@ const socialLogin = async ({ provider, providerUserId, email, fullName }) => {
       },
       { transaction: t }
     );
+
+    // Process referral
+    if (validReferrer && validReferrer.id !== newUser.id) {
+      await Referral.create({
+        referrerId: validReferrer.id,
+        referredUserId: newUser.id,
+        referralCode: referralCode,
+        status: 'PENDING'
+      }, { transaction: t });
+    }
 
     return newUser;
   });

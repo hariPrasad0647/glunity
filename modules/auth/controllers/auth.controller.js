@@ -5,8 +5,8 @@ const response = require('../../../utils/response');
 
 const signup = async (req, res, next) => {
   try {
-    const { fullName, username, email, phone } = req.body;
-    const result = await authService.signup({ fullName, username, email, phone });
+    const { fullName, username, email, phone, referralCode } = req.body;
+    const result = await authService.signup({ fullName, username, email, phone, referralCode });
     return response.success(res, 201, 'Verification code sent to your email', result);
   } catch (err) {
     next(err);
@@ -55,13 +55,14 @@ const verifyLogin = async (req, res, next) => {
 
 const googleLogin = async (req, res, next) => {
   try {
-    const { idToken } = req.body;
+    const { idToken, referralCode } = req.body;
     const googleProfile = await googleService.verifyGoogleToken(idToken);
     const result = await authService.socialLogin({
       provider: 'GOOGLE',
       providerUserId: googleProfile.providerUserId,
       email: googleProfile.email,
       fullName: googleProfile.fullName,
+      referralCode,
     });
     return response.success(res, 200, 'Logged in with Google successfully', result);
   } catch (err) {
@@ -71,13 +72,14 @@ const googleLogin = async (req, res, next) => {
 
 const appleLogin = async (req, res, next) => {
   try {
-    const { identityToken, fullName } = req.body;
+    const { identityToken, fullName, referralCode } = req.body;
     const appleProfile = await appleService.verifyAppleToken(identityToken);
     const result = await authService.socialLogin({
       provider: 'APPLE',
       providerUserId: appleProfile.providerUserId,
       email: appleProfile.email,
       fullName: fullName || 'Apple User', // fullName might only be sent on first sign-in
+      referralCode,
     });
     return response.success(res, 200, 'Logged in with Apple successfully', result);
   } catch (err) {

@@ -11,6 +11,7 @@ const PendingSignup = sequelize.define(
     email: { type: DataTypes.STRING, allowNull: false },
     phone: { type: DataTypes.STRING, allowNull: false },
     expiresAt: { type: DataTypes.DATE, allowNull: false },
+    referralCode: { type: DataTypes.STRING, allowNull: true },
   },
   {
     tableName: 'pending_signups',

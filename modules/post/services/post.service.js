@@ -96,6 +96,9 @@ const createPost = async (userId, { content }, cdnUrls = []) => {
   // Award QUALITY_POST points — fires after full post is persisted
   awardQualityPost(userId, post.id).catch(() => {});
 
+  const { markFirstPost } = require('../../referral/services/referral.service');
+  markFirstPost(userId).catch(() => {});
+
   return formatted;
 };
 

@@ -63,6 +63,8 @@ const updateProfile = async (userId, fields, imageFile, bannerUpload) => {
   // The idempotencyKey PROFILE_SETUP:{userId} guarantees this is a one-time award
   if (user.profileImage) {
     awardProfileSetup(userId).catch(() => {});
+    const { markProfileCompleted } = require('../../referral/services/referral.service');
+    markProfileCompleted(userId).catch(() => {});
   }
 
   return user;

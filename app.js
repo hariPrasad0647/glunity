@@ -17,6 +17,7 @@ const feedRoutes = require('./modules/feed/routes/feed.routes');
 const storyRoutes = require('./modules/story/routes/story.routes');
 const contentRoutes = require('./modules/content/routes/content.routes');
 const pointsRoutes = require('./modules/points/routes/points.routes');
+const referralRoutes = require('./modules/referral/routes/referral.routes');
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use('/api/feed', feedRoutes);
 app.use('/api/stories', storyRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/points', pointsRoutes);
+app.use('/api/referrals', referralRoutes);
 
 app.use(errorHandler);
 

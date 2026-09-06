@@ -24,6 +24,7 @@ const User = sequelize.define(
     bannerVideo: { type: DataTypes.STRING, allowNull: true },
     bio: { type: DataTypes.STRING(160), allowNull: true },
     profession: { type: DataTypes.STRING(100), allowNull: true },
+    referralCode: { type: DataTypes.STRING, allowNull: true },
   },
   {
     tableName: 'users',

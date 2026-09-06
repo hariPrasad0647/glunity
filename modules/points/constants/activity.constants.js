@@ -10,6 +10,7 @@ const ACTIVITY_TYPES = Object.freeze({
   REPOST:         'REPOST',
   DAILY_ACTIVITY: 'DAILY_ACTIVITY',
   CHAT_MESSAGE:   'CHAT_MESSAGE',
+  REFERRAL:       'REFERRAL',
 });
 
 const POINT_VALUES = Object.freeze({
@@ -20,6 +21,7 @@ const POINT_VALUES = Object.freeze({
   [ACTIVITY_TYPES.REPOST]:         5,
   [ACTIVITY_TYPES.DAILY_ACTIVITY]: 50,
   [ACTIVITY_TYPES.CHAT_MESSAGE]:   2,
+  [ACTIVITY_TYPES.REFERRAL]:       500,
 });
 
 const ACTIVITY_DESCRIPTIONS = Object.freeze({
@@ -30,6 +32,7 @@ const ACTIVITY_DESCRIPTIONS = Object.freeze({
   [ACTIVITY_TYPES.REPOST]:         'Repost',
   [ACTIVITY_TYPES.DAILY_ACTIVITY]: 'Daily Activity',
   [ACTIVITY_TYPES.CHAT_MESSAGE]:   'Chat Message',
+  [ACTIVITY_TYPES.REFERRAL]:       'Successful Referral',
 });
 
 module.exports = { ACTIVITY_TYPES, POINT_VALUES, ACTIVITY_DESCRIPTIONS };

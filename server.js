@@ -23,6 +23,9 @@ require('./modules/reply/models/reply_like.model');
 // Points models
 require('./modules/points/models/pointTransaction.model');
 
+// Referral models
+require('./modules/referral/models/referral.model');
+
 const PORT = process.env.PORT || 5000;
 
 const start = async () => {

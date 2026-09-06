@@ -9,26 +9,11 @@ const Follow = require('../../user/models/follow.model');
 
 const canMessageUser = async (senderId, recipientId) => {
   const recipient = await User.findByPk(recipientId, {
-    attributes: ['id', 'isPrivate'],
+    attributes: ['id'],
   });
   if (!recipient) return { allowed: false, status: 404, reason: 'Recipient user not found' };
-  if (!recipient.isPrivate) return { allowed: true };
-
-  const [senderFollows, recipientFollows] = await Promise.all([
-    Follow.findOne({
-      where: { followerId: senderId, followingId: recipientId, status: 'accepted' },
-    }),
-    Follow.findOne({
-      where: { followerId: recipientId, followingId: senderId, status: 'accepted' },
-    }),
-  ]);
-
-  if (senderFollows && recipientFollows) return { allowed: true };
-  return {
-    allowed: false,
-    status: 403,
-    reason: 'You can only message mutual followers of private accounts',
-  };
+  
+  return { allowed: true };
 };
 
 const findOrCreateConversation = async (userAId, userBId) => {
@@ -228,7 +213,7 @@ const searchChat = async (userId, query) => {
   // Mutual (accepted both ways) follows matching the query — lets the FE start a new chat
   // with a friend even when no conversation exists yet
   const myFollowing = await Follow.findAll({
-    where: { followerId: userId, status: 'accepted' },
+    where: { followerId: userId },
     attributes: ['followingId'],
     raw: true,
   });
@@ -237,7 +222,7 @@ const searchChat = async (userId, query) => {
   let friends = [];
   if (followingIds.length) {
     const mutuals = await Follow.findAll({
-      where: { followerId: { [Op.in]: followingIds }, followingId: userId, status: 'accepted' },
+      where: { followerId: { [Op.in]: followingIds }, followingId: userId },
       include: [
         {
           model: User,

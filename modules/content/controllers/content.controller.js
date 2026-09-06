@@ -4,11 +4,11 @@ const { success, error } = require('../../../utils/response');
 
 const createContentController = async (req, res, next) => {
   try {
-    const { caption, content, isPrivate } = req.body;
+    const { caption, content } = req.body;
 
     if (req.contentType === 'reel') {
       const { videoUrl, thumbnailUrl } = req.reelUpload;
-      const reel = await createReel(req.user.id, { caption, isPrivate }, videoUrl, thumbnailUrl);
+      const reel = await createReel(req.user.id, { caption }, videoUrl, thumbnailUrl);
       return success(res, 201, 'Reel created successfully', { type: 'reel', ...reel });
     }
 
@@ -16,7 +16,7 @@ const createContentController = async (req, res, next) => {
       if (!req.cdnUrls?.length && (!content || content.trim() === '')) {
         return error(res, 400, 'Post must contain text or media');
       }
-      const post = await createPost(req.user.id, { content, isPrivate }, req.cdnUrls || []);
+      const post = await createPost(req.user.id, { content }, req.cdnUrls || []);
       return success(res, 201, 'Post created successfully', { type: 'post', ...post });
     }
 

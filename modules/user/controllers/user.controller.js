@@ -34,7 +34,7 @@ const updateProfileController = async (req, res, next) => {
     if (profession !== undefined) fields.profession = profession;
     if (isPrivate !== undefined) fields.isPrivate = isPrivate;
 
-    const user = await updateProfile(req.user.id, fields, req.file);
+    const user = await updateProfile(req.user.id, fields, req.file, req.bannerUpload);
 
     return success(res, 200, 'Profile updated successfully', {
       id: user.id,
@@ -46,6 +46,8 @@ const updateProfileController = async (req, res, next) => {
       profession: user.profession,
       isPrivate: user.isPrivate,
       profileImage: user.profileImage || null,
+      bannerImage: user.bannerImage || null,
+      bannerVideo: user.bannerVideo || null,
     });
   } catch (err) {
     if (err.status) return error(res, err.status, err.message);

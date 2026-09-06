@@ -13,6 +13,11 @@ const sendMessageValidator = [
     .trim()
     .isLength({ max: 5000 })
     .withMessage('Message content must not exceed 5000 characters'),
+
+  body('replyToId')
+    .optional({ nullable: true })
+    .isUUID()
+    .withMessage('replyToId must be a valid message id'),
 ];
 
 const getMessagesQueryValidator = [

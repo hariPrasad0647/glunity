@@ -59,7 +59,7 @@ const uploadChatMedia = async (req, res, next) => {
 
 const sendMessage = async (req, res, next) => {
   try {
-    const { recipientId, content } = req.body;
+    const { recipientId, content, replyToId } = req.body;
     const senderId = req.user.id;
 
     if (!content && !req.chatUpload) return error(res, 400, 'Message must have text or a file');
@@ -75,6 +75,7 @@ const sendMessage = async (req, res, next) => {
       senderId,
       content: content?.trim() || null,
       mediaItems,
+      replyToId: replyToId || null,
     });
 
     // Push real-time event to recipient and any other tabs the sender has open

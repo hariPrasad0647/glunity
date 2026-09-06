@@ -16,6 +16,11 @@ const chatUpload = createUpload(
   [...IMAGE_EXTS, ...VIDEO_EXTS],
   parseInt(process.env.MAX_VIDEO_SIZE) || 104857600
 );
+// 50 MB cap for profile banner (image or short video ≤ 15 s — duration enforced client-side)
+const bannerUpload = createUpload(
+  [...IMAGE_EXTS, ...VIDEO_EXTS],
+  parseInt(process.env.MAX_BANNER_SIZE) || 52428800
+);
 
 const handleMulterError = (err, res, { videoMode = false, expectedFields = [] } = {}) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
@@ -48,6 +53,27 @@ const uploadProfileImage = (req, res, next) => {
     } catch (uploadErr) {
       logger.error('uploadProfileImage failed:', uploadErr);
       return error(res, 500, 'Failed to upload image. Please try again.');
+    }
+  });
+};
+
+// ── Profile banner (image or video) ─────────────────────────────────────────
+
+const uploadProfileBanner = (req, res, next) => {
+  bannerUpload.single('banner')(req, res, async (err) => {
+    if (err) return handleMulterError(err, res, { videoMode: true, expectedFields: ['banner'] });
+    if (!req.file) return next();
+    try {
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      const isVideo = VIDEO_EXTS.includes(ext);
+      const folder = isVideo ? 'profile-banners/videos' : 'profile-banners/images';
+      const filename = `${req.user.id}_${Date.now()}${ext}`;
+      const bannerUrl = await uploadToBunny(req.file.buffer, `${folder}/${filename}`);
+      req.bannerUpload = { bannerUrl, bannerType: isVideo ? 'video' : 'image' };
+      next();
+    } catch (uploadErr) {
+      logger.error('uploadProfileBanner failed:', uploadErr);
+      return error(res, 500, 'Failed to upload banner. Please try again.');
     }
   });
 };
@@ -213,6 +239,7 @@ const uploadContent = (req, res, next) => {
 
 module.exports = {
   uploadProfileImage,
+  uploadProfileBanner,
   uploadPostImages,
   uploadReel,
   uploadChatMedia,

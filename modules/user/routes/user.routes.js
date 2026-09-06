@@ -4,7 +4,7 @@ const router = express.Router();
 const auth = require('../../../middleware/auth');
 const validate = require('../../../middleware/validate');
 const { uuidParam, requiredQuery } = require('../../../utils/paramValidators');
-const { uploadProfileImage } = require('../../../middleware/upload');
+const { uploadProfileImage, uploadProfileBanner } = require('../../../middleware/upload');
 const { updateProfileValidator, saveInterestsValidator } = require('../validators/user.validator');
 const {
   updateProfileController,
@@ -40,6 +40,7 @@ router.patch(
     '/profile',
     auth,
     uploadProfileImage,
+    uploadProfileBanner,
     updateProfileValidator,
     validate,
     updateProfileController

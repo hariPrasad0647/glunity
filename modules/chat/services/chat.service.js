@@ -63,6 +63,7 @@ const saveMessage = async ({
   messageType = 'text',
   storyId = null,
   reactionEmoji = null,
+  replyToId = null,
 }) => {
   const message = await Message.create({
     conversationId,
@@ -71,6 +72,7 @@ const saveMessage = async ({
     messageType,
     storyId,
     reactionEmoji,
+    replyToId,
   });
 
   if (mediaItems.length > 0) {
@@ -83,6 +85,15 @@ const saveMessage = async ({
     include: [
       { model: User, as: 'sender', attributes: ['id', 'username', 'profileImage'] },
       { model: MessageMedia, as: 'media' },
+      {
+        model: Message,
+        as: 'replyTo',
+        attributes: ['id', 'content', 'isDeleted'],
+        include: [
+          { model: User, as: 'sender', attributes: ['id', 'username', 'profileImage'] },
+          { model: MessageMedia, as: 'media' },
+        ],
+      },
     ],
   });
 };
@@ -181,6 +192,15 @@ const getMessages = async (conversationId, userId, { limit = 30, before } = {}) 
     include: [
       { model: User, as: 'sender', attributes: ['id', 'username', 'profileImage'] },
       { model: MessageMedia, as: 'media' },
+      {
+        model: Message,
+        as: 'replyTo',
+        attributes: ['id', 'content', 'isDeleted'],
+        include: [
+          { model: User, as: 'sender', attributes: ['id', 'username', 'profileImage'] },
+          { model: MessageMedia, as: 'media' },
+        ],
+      },
     ],
     order: [['createdAt', 'DESC']],
     limit,

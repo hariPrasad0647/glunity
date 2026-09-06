@@ -20,7 +20,7 @@ module.exports = (io) => {
     socket.join(socket.user.id);
 
     // ── Send a message ──────────────────────────────────────────────────────────
-    socket.on('chat:send', async ({ recipientId, content, media = [] }) => {
+    socket.on('chat:send', async ({ recipientId, content, media = [], replyToId = null }) => {
       try {
         if (!recipientId) return socket.emit('chat:error', { message: 'recipientId is required' });
         if (!content && media.length === 0) {
@@ -39,6 +39,7 @@ module.exports = (io) => {
           senderId,
           content: content || null,
           mediaItems: media,
+          replyToId: replyToId || null,
         });
 
         const payload = { conversationId: conversation.id, message };

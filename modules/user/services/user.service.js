@@ -16,7 +16,7 @@ const Reply = require('../../reply/models/reply.model');
 
 const FOLLOWER_ATTRS = ['id', 'username', 'fullName', 'profileImage'];
 
-const updateProfile = async (userId, fields, imageFile) => {
+const updateProfile = async (userId, fields, imageFile, bannerUpload) => {
   const user = await User.findByPk(userId);
   if (!user) {
     const err = new Error('User not found');
@@ -40,6 +40,20 @@ const updateProfile = async (userId, fields, imageFile) => {
       await deleteFromBunny(user.profileImage).catch(() => {});
     }
     fields.profileImage = imageFile.cdnUrl;
+  }
+
+  if (bannerUpload) {
+    // Delete whichever banner type previously existed
+    if (user.bannerImage) await deleteFromBunny(user.bannerImage).catch(() => {});
+    if (user.bannerVideo) await deleteFromBunny(user.bannerVideo).catch(() => {});
+
+    if (bannerUpload.bannerType === 'video') {
+      fields.bannerVideo = bannerUpload.bannerUrl;
+      fields.bannerImage = null; // clear the other type
+    } else {
+      fields.bannerImage = bannerUpload.bannerUrl;
+      fields.bannerVideo = null; // clear the other type
+    }
   }
 
   await user.update(fields);
@@ -339,7 +353,7 @@ const canViewContent = async (viewerId, target) => {
 
 const getUserProfile = async (viewerId, targetId) => {
   const target = await User.findByPk(targetId, {
-    attributes: ['id', 'username', 'fullName', 'bio', 'profession', 'profileImage', 'isPrivate', 'createdAt'],
+    attributes: ['id', 'username', 'fullName', 'bio', 'profession', 'profileImage', 'bannerImage', 'bannerVideo', 'isPrivate', 'createdAt'],
   });
   if (!target) throwErr(404, 'User not found');
 

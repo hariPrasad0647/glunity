@@ -41,6 +41,12 @@ const Message = sequelize.define(
       type: DataTypes.STRING(20),
       allowNull: true,
     },
+    replyToId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: { model: 'messages', key: 'id' },
+      onDelete: 'SET NULL',
+    },
     isDeleted: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -56,5 +62,6 @@ const Message = sequelize.define(
 Conversation.hasMany(Message, { foreignKey: 'conversationId', as: 'messages' });
 Message.belongsTo(Conversation, { foreignKey: 'conversationId' });
 Message.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
+Message.belongsTo(Message, { foreignKey: 'replyToId', as: 'replyTo' });
 
 module.exports = Message;

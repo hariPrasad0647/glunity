@@ -12,7 +12,14 @@ const getMe = async (req, res, next) => {
       return response.error(res, 404, 'User not found');
     }
 
-    const referralCode = user.referralCode;
+    let referralCode = user.referralCode;
+    
+    if (!referralCode) {
+      const { generateUniqueReferralCode } = require('../../auth/services/auth.service');
+      referralCode = await generateUniqueReferralCode();
+      user.referralCode = referralCode;
+      await user.save();
+    }
     const clientUrl = process.env.CLIENT_URL || 'https://glunity.org';
     const referralLink = `${clientUrl}/signup?ref=${referralCode}`;
 

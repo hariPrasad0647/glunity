@@ -325,4 +325,4 @@ const socialLogin = async ({ provider, providerUserId, email, fullName, referral
   return buildAuthResponse(user);
 };
 
-module.exports = { ApiError, signup, resendOtp, verifyOtp, requestLogin, verifyLogin, socialLogin };
+module.exports = { ApiError, signup, resendOtp, verifyOtp, requestLogin, verifyLogin, socialLogin, generateUniqueReferralCode };

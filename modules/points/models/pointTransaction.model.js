@@ -43,7 +43,6 @@ const PointTransaction = sequelize.define(
     idempotencyKey: {
       type: DataTypes.STRING(255),
       allowNull: false,
-      unique: true,
     },
   },
   {
@@ -55,6 +54,7 @@ const PointTransaction = sequelize.define(
       { fields: ['userId', 'createdAt'] },
       { fields: ['userId', 'activityType'] },
       { fields: ['referenceId'] },
+      { unique: true, fields: ['idempotencyKey'] },
     ],
   }
 );

@@ -19,6 +19,7 @@ const contentRoutes = require('./modules/content/routes/content.routes');
 const pointsRoutes = require('./modules/points/routes/points.routes');
 const referralRoutes = require('./modules/referral/routes/referral.routes');
 const trustScoreRoutes = require('./modules/trust-score/routes/trust-score.routes');
+const notificationRoutes = require('./modules/notification/routes/notification.routes');
 
 const app = express();
 
@@ -62,6 +63,7 @@ app.use('/api/content', contentRoutes);
 app.use('/api/points', pointsRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/trust-score', trustScoreRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use(errorHandler);
 

@@ -4,7 +4,9 @@ const Repost = require('../models/repost.model');
 const Post = require('../models/post.model');
 const Reel = require('../../reel/models/reel.model');
 const Reply = require('../../reply/models/reply.model');
+const User = require('../../user/models/user.model');
 const { awardReceivedLike, awardRepost } = require('../../points/services/points.service');
+const { createNotification } = require('../../notification/services/notification.service');
 
 const findContent = async (contentType, contentId) => {
   const model = contentType === 'post' ? Post : Reel;
@@ -37,6 +39,18 @@ const toggleLike = async (userId, contentType, contentId) => {
   // Only fires on a new like (not an unlike) — like/unlike/like = 1 award ever
   if (!existing && content.userId && content.userId !== userId) {
     awardReceivedLike(content.userId, contentId, userId).catch(() => {});
+    
+    const liker = await User.findByPk(userId, { attributes: ['fullName'] });
+    if (liker) {
+      await createNotification({
+        recipientId: content.userId,
+        actorId: userId,
+        type: 'LIKE',
+        message: `${liker.fullName} liked your ${contentType}`,
+        entityId: contentId,
+        entityType: contentType.toUpperCase(),
+      }).catch(console.error);
+    }
   }
   
   return { liked: !existing, likeCount };
@@ -78,6 +92,20 @@ const repostContent = async (userId, contentType, contentId) => {
   // repost → undo → repost cycles are prevented by the Repost unique index
   if (created) {
     awardRepost(userId, contentId).catch(() => {});
+
+    if (content.userId && content.userId !== userId) {
+      const reposter = await User.findByPk(userId, { attributes: ['fullName'] });
+      if (reposter) {
+        await createNotification({
+          recipientId: content.userId,
+          actorId: userId,
+          type: 'REPOST',
+          message: `${reposter.fullName} reposted your ${contentType}`,
+          entityId: contentId,
+          entityType: contentType.toUpperCase(),
+        }).catch(console.error);
+      }
+    }
   }
   
   return { repostCount };

@@ -15,6 +15,7 @@ const Repost = require('../../post/models/repost.model');
 const Reply = require('../../reply/models/reply.model');
 const { awardProfileSetup } = require('../../points/services/points.service');
 const { getTrustScore } = require('../../trust-score/services/trust-score.service');
+const { createNotification } = require('../../notification/services/notification.service');
 
 const FOLLOWER_ATTRS = ['id', 'username', 'fullName', 'profileImage'];
 
@@ -116,10 +117,24 @@ const followUser = async (requesterId, targetId) => {
     throwErr(409, 'Already following this user');
   }
 
-  return Follow.create({
+  const follow = await Follow.create({
     followerId: requesterId,
     followingId: targetId,
   });
+
+  const requester = await User.findByPk(requesterId, { attributes: ['fullName'] });
+  if (requester) {
+    await createNotification({
+      recipientId: targetId,
+      actorId: requesterId,
+      type: 'FOLLOW',
+      message: `${requester.fullName} followed you`,
+      entityId: requesterId,
+      entityType: 'USER',
+    }).catch(console.error);
+  }
+
+  return follow;
 };
 
 

@@ -4,6 +4,7 @@ const User = require('../../user/models/user.model');
 const Post = require('../../post/models/post.model');
 const Reel = require('../../reel/models/reel.model');
 const { awardComment } = require('../../points/services/points.service');
+const { createNotification } = require('../../notification/services/notification.service');
 
 const findContent = async (contentType, contentId) => {
   const model = contentType === 'post' ? Post : Reel;
@@ -57,7 +58,7 @@ const formatReply = (reply, stats = {}) => {
 };
 
 const addReply = async (userId, contentType, contentId, text, parentId = null) => {
-  await findContent(contentType, contentId);
+  const content = await findContent(contentType, contentId);
 
   if (parentId) {
     const parent = await Reply.findOne({ where: { id: parentId, contentType, contentId } });
@@ -81,6 +82,34 @@ const addReply = async (userId, contentType, contentId, text, parentId = null) =
   if (contentType === 'post' && !parentId) {
     const replyCount = await Reply.count({ where: { contentType: 'post', contentId, parentId: null, isDeleted: false } });
     await Post.update({ replyCount }, { where: { id: contentId } });
+  }
+
+  const commenter = await User.findByPk(userId, { attributes: ['fullName'] });
+  if (commenter) {
+    if (parentId) {
+      const parentComment = await Reply.findByPk(parentId);
+      if (parentComment && parentComment.userId !== userId) {
+        await createNotification({
+          recipientId: parentComment.userId,
+          actorId: userId,
+          type: 'REPLY',
+          message: `${commenter.fullName} replied to your comment`,
+          entityId: reply.id,
+          entityType: 'REPLY',
+        }).catch(console.error);
+      }
+    } else {
+      if (content.userId && content.userId !== userId) {
+        await createNotification({
+          recipientId: content.userId,
+          actorId: userId,
+          type: 'COMMENT',
+          message: `${commenter.fullName} commented on your ${contentType}`,
+          entityId: reply.id,
+          entityType: 'REPLY',
+        }).catch(console.error);
+      }
+    }
   }
   
   const full = await Reply.findByPk(reply.id, {

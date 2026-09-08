@@ -15,15 +15,22 @@ const signupValidator = [
     .isEmail()
     .withMessage('A valid email is required')
     .normalizeEmail(),
-  body('phone')
+  body('password')
     .trim()
     .notEmpty()
-    .withMessage('Phone number is required')
+    .withMessage('Password is required')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters'),
+  body('phone')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Phone number cannot be empty if provided')
     .isMobilePhone('any')
     .withMessage('A valid phone number is required'),
 ];
 
-const resendOtpValidator = [
+const forgotPasswordValidator = [
   body('email')
     .trim()
     .notEmpty()
@@ -33,7 +40,7 @@ const resendOtpValidator = [
     .normalizeEmail(),
 ];
 
-const verifyOtpValidator = [
+const resetPasswordValidator = [
   body('email')
     .trim()
     .notEmpty()
@@ -49,6 +56,12 @@ const verifyOtpValidator = [
     .withMessage('Verification code must be 6 digits')
     .isNumeric()
     .withMessage('Verification code must be numeric'),
+  body('newPassword')
+    .trim()
+    .notEmpty()
+    .withMessage('New password is required')
+    .isLength({ min: 6 })
+    .withMessage('New password must be at least 6 characters'),
 ];
 
 const loginValidator = [
@@ -59,24 +72,10 @@ const loginValidator = [
     .isEmail()
     .withMessage('A valid email is required')
     .normalizeEmail(),
-];
-
-const verifyLoginValidator = [
-  body('email')
+  body('password')
     .trim()
     .notEmpty()
-    .withMessage('Email is required')
-    .isEmail()
-    .withMessage('A valid email is required')
-    .normalizeEmail(),
-  body('code')
-    .trim()
-    .notEmpty()
-    .withMessage('Login code is required')
-    .isLength({ min: 6, max: 6 })
-    .withMessage('Login code must be 6 digits')
-    .isNumeric()
-    .withMessage('Login code must be numeric'),
+    .withMessage('Password is required'),
 ];
 
 const googleLoginValidator = [
@@ -95,10 +94,9 @@ const appleLoginValidator = [
 
 module.exports = {
   signupValidator,
-  resendOtpValidator,
-  verifyOtpValidator,
+  forgotPasswordValidator,
+  resetPasswordValidator,
   loginValidator,
-  verifyLoginValidator,
   googleLoginValidator,
   appleLoginValidator,
 };

@@ -96,11 +96,16 @@ const uploadProfileMedia = (req, res, next) => {
   });
 };
 
-// ── Post images (up to 10) ────────────────────────────────────────────────────
+// ── Post media (images or videos, up to 10) ───────────────────────────────────
 
-const uploadPostImages = (req, res, next) => {
-  imageUpload.array('images', 10)(req, res, async (err) => {
-    if (err) return handleMulterError(err, res, { expectedFields: ['images'] });
+const postMediaUpload = createUpload(
+  [...IMAGE_EXTS, ...VIDEO_EXTS],
+  parseInt(process.env.MAX_VIDEO_SIZE) || 104857600
+);
+
+const uploadPostMedia = (req, res, next) => {
+  postMediaUpload.array('media', 10)(req, res, async (err) => {
+    if (err) return handleMulterError(err, res, { videoMode: true, expectedFields: ['media'] });
     if (!req.files || req.files.length === 0) return next();
     try {
       const timestamp = Date.now();
@@ -112,8 +117,8 @@ const uploadPostImages = (req, res, next) => {
       );
       next();
     } catch (uploadErr) {
-      logger.error('uploadPostImages failed:', uploadErr);
-      return error(res, 500, 'Failed to upload images. Please try again.');
+      logger.error('uploadPostMedia failed:', uploadErr);
+      return error(res, 500, 'Failed to upload media. Please try again.');
     }
   });
 };
@@ -257,7 +262,7 @@ const uploadContent = (req, res, next) => {
 
 module.exports = {
   uploadProfileMedia,
-  uploadPostImages,
+  uploadPostMedia,
   uploadReel,
   uploadChatMedia,
   uploadStory,

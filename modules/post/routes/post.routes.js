@@ -4,7 +4,7 @@ const router = express.Router();
 const auth = require('../../../middleware/auth');
 const validate = require('../../../middleware/validate');
 const { uuidParam } = require('../../../utils/paramValidators');
-const { uploadPostImages } = require('../../../middleware/upload');
+const { uploadPostMedia } = require('../../../middleware/upload');
 const { createPostValidator } = require('../validators/post.validator');
 const { replyTextValidator } = require('../../reply/validators/reply.validator');
 const {
@@ -27,7 +27,7 @@ const {
 const setPost = (req, res, next) => { req.contentType = 'post'; next(); };
 
 // POST /api/posts
-router.post('/', auth, uploadPostImages, createPostValidator, validate, createPostController);
+router.post('/', auth, uploadPostMedia, createPostValidator, validate, createPostController);
 
 // GET /api/posts/:id
 router.get('/:id', auth, uuidParam('id'), validate, getPostController);

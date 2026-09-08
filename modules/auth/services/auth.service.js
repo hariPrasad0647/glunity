@@ -2,17 +2,15 @@ const { Op } = require('sequelize');
 const sequelize = require('../../../config/db');
 const User = require('../../user/models/user.model');
 const Otp = require('../models/otp.model');
-const PendingSignup = require('../models/pending-signup.model');
 const AuthIdentity = require('../models/auth-identity.model');
 const Referral = require('../../referral/models/referral.model');
+const bcrypt = require('bcryptjs');
 const { generateOtp, hashOtp, compareOtp } = require('../../../utils/otp');
 const { sendOtpEmail } = require('../../../utils/email');
 const { signAccessToken, signRefreshToken } = require('../../../config/jwt');
 
-const OTP_PURPOSE_SIGNUP = 'signup';
-const OTP_PURPOSE_LOGIN = 'login';
+const OTP_PURPOSE_FORGOT_PASSWORD = 'forgot-password';
 const OTP_TTL_SECONDS = Number(process.env.OTP_EXPIRES_IN || 300);
-const PENDING_TTL_SECONDS = Number(process.env.PENDING_SIGNUP_EXPIRES_IN || 86400);
 const RESEND_COOLDOWN_SECONDS = 60;
 const MAX_ATTEMPTS = 5;
 
@@ -83,20 +81,14 @@ const buildAuthResponse = (user) => {
   };
 };
 
-const signup = async ({ fullName, username, email, phone, referralCode }) => {
-  // Block if a verified account already holds this email or username
-  const verifiedUser = await User.findOne({
+const signup = async ({ fullName, username, email, phone, password, referralCode }) => {
+  // Block if an account already holds this email or username
+  const existingUser = await User.findOne({
     where: { [Op.or]: [{ email }, { username }] },
   });
-  if (verifiedUser) {
-    const field = verifiedUser.email === email ? 'email' : 'username';
+  if (existingUser) {
+    const field = existingUser.email === email ? 'email' : 'username';
     throw new ApiError(409, `An account with this ${field} already exists`);
-  }
-
-  // Cooldown check before any write
-  const cooldown = await getActiveCooldown(email, OTP_PURPOSE_SIGNUP);
-  if (cooldown > 0) {
-    throw new ApiError(429, `Please wait ${cooldown}s before requesting another code`);
   }
 
   // Validate referral code if provided
@@ -107,82 +99,14 @@ const signup = async ({ fullName, username, email, phone, referralCode }) => {
     }
   }
 
-  // Block if another *active* pending signup holds the same username under a different email
-  const usernameConflict = await PendingSignup.findOne({
-    where: { username, email: { [Op.ne]: email } },
-  });
-  if (usernameConflict) {
-    if (new Date(usernameConflict.expiresAt) > new Date()) {
-      throw new ApiError(409, 'This username is already taken');
-    }
-    await usernameConflict.destroy();
-  }
-
-  // Store signup details temporarily — no user row yet
-  const expiresAt = new Date(Date.now() + PENDING_TTL_SECONDS * 1000);
-  await PendingSignup.upsert({ fullName, username, email, phone, expiresAt, referralCode });
-
-  await issueOtp(email, OTP_PURPOSE_SIGNUP);
-
-  return { email };
-};
-
-const resendOtp = async (email) => {
-  const pending = await PendingSignup.findOne({ where: { email } });
-  if (!pending) {
-    throw new ApiError(404, 'No pending signup found for this email');
-  }
-  if (new Date(pending.expiresAt) < new Date()) {
-    throw new ApiError(400, 'Your signup session has expired, please sign up again');
-  }
-
-  const cooldown = await getActiveCooldown(email, OTP_PURPOSE_SIGNUP);
-  if (cooldown > 0) {
-    throw new ApiError(429, `Please wait ${cooldown}s before requesting another code`);
-  }
-
-  await issueOtp(email, OTP_PURPOSE_SIGNUP);
-  return { email };
-};
-
-const verifyOtp = async (email, code) => {
-  const pending = await PendingSignup.findOne({ where: { email } });
-  if (!pending) {
-    const alreadyVerified = await User.findOne({ where: { email } });
-    if (alreadyVerified) throw new ApiError(409, 'This account is already verified');
-    throw new ApiError(404, 'No pending signup found for this email');
-  }
-  if (new Date(pending.expiresAt) < new Date()) {
-    throw new ApiError(400, 'Your signup session has expired, please sign up again');
-  }
-
-  const otp = await Otp.findOne({
-    where: { email, purpose: OTP_PURPOSE_SIGNUP, consumedAt: null },
-    order: [['createdAt', 'DESC']],
-  });
-  if (!otp) throw new ApiError(400, 'No active verification code found, please request a new one');
-  if (otp.expiresAt < new Date()) throw new ApiError(400, 'Verification code has expired');
-  if (otp.attempts >= MAX_ATTEMPTS) {
-    throw new ApiError(429, 'Too many incorrect attempts, please request a new code');
-  }
-
-  const isMatch = await compareOtp(code, otp.codeHash);
-  if (!isMatch) {
-    await otp.increment('attempts');
-    throw new ApiError(400, 'Invalid verification code');
-  }
-
-  // Atomically consume OTP, create the verified user, and delete the pending row
-  const { fullName, username, phone, referralCode } = pending;
   const newReferralCode = await generateUniqueReferralCode();
+  const hashedPassword = await bcrypt.hash(password, 10);
 
   const user = await sequelize.transaction(async (t) => {
-    await otp.update({ consumedAt: new Date() }, { transaction: t });
     const newUser = await User.create(
-      { fullName, username, email, phone, isVerified: true, referralCode: newReferralCode },
+      { fullName, username, email, phone, password: hashedPassword, isVerified: true, referralCode: newReferralCode },
       { transaction: t }
     );
-    await pending.destroy({ transaction: t });
     
     // Process referral
     if (referralCode) {
@@ -203,33 +127,51 @@ const verifyOtp = async (email, code) => {
   return buildAuthResponse(user);
 };
 
-const requestLogin = async (email) => {
+const login = async (email, password) => {
   const user = await User.findOne({ where: { email } });
   if (!user) {
     throw new ApiError(404, 'No account found with this email');
   }
 
-  const cooldown = await getActiveCooldown(email, OTP_PURPOSE_LOGIN);
+  if (!user.password) {
+    throw new ApiError(400, 'This account uses social login. Please login with Google/Apple or use Forgot Password to set a password.');
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    throw new ApiError(401, 'Invalid email or password');
+  }
+
+  return buildAuthResponse(user);
+};
+
+const forgotPassword = async (email) => {
+  const user = await User.findOne({ where: { email } });
+  if (!user) {
+    throw new ApiError(404, 'No account found with this email');
+  }
+
+  const cooldown = await getActiveCooldown(email, OTP_PURPOSE_FORGOT_PASSWORD);
   if (cooldown > 0) {
     throw new ApiError(429, `Please wait ${cooldown}s before requesting another code`);
   }
 
-  await issueOtp(email, OTP_PURPOSE_LOGIN);
+  await issueOtp(email, OTP_PURPOSE_FORGOT_PASSWORD);
   return { email };
 };
 
-const verifyLogin = async (email, code) => {
+const resetPassword = async (email, code, newPassword) => {
   const user = await User.findOne({ where: { email } });
   if (!user) {
     throw new ApiError(404, 'No account found with this email');
   }
 
   const otp = await Otp.findOne({
-    where: { email, purpose: OTP_PURPOSE_LOGIN, consumedAt: null },
+    where: { email, purpose: OTP_PURPOSE_FORGOT_PASSWORD, consumedAt: null },
     order: [['createdAt', 'DESC']],
   });
-  if (!otp) throw new ApiError(400, 'No active login code found, please request a new one');
-  if (otp.expiresAt < new Date()) throw new ApiError(400, 'Login code has expired');
+  if (!otp) throw new ApiError(400, 'No active password reset code found, please request a new one');
+  if (otp.expiresAt < new Date()) throw new ApiError(400, 'Password reset code has expired');
   if (otp.attempts >= MAX_ATTEMPTS) {
     throw new ApiError(429, 'Too many incorrect attempts, please request a new code');
   }
@@ -237,10 +179,15 @@ const verifyLogin = async (email, code) => {
   const isMatch = await compareOtp(code, otp.codeHash);
   if (!isMatch) {
     await otp.increment('attempts');
-    throw new ApiError(400, 'Invalid login code');
+    throw new ApiError(400, 'Invalid reset code');
   }
 
-  await otp.update({ consumedAt: new Date() });
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  
+  await sequelize.transaction(async (t) => {
+    await otp.update({ consumedAt: new Date() }, { transaction: t });
+    await user.update({ password: hashedPassword }, { transaction: t });
+  });
 
   return buildAuthResponse(user);
 };
@@ -325,4 +272,4 @@ const socialLogin = async ({ provider, providerUserId, email, fullName, referral
   return buildAuthResponse(user);
 };
 
-module.exports = { ApiError, signup, resendOtp, verifyOtp, requestLogin, verifyLogin, socialLogin, generateUniqueReferralCode };
+module.exports = { ApiError, signup, login, forgotPassword, resetPassword, socialLogin, generateUniqueReferralCode };

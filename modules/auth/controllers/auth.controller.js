@@ -5,29 +5,9 @@ const response = require('../../../utils/response');
 
 const signup = async (req, res, next) => {
   try {
-    const { fullName, username, email, phone, referralCode } = req.body;
-    const result = await authService.signup({ fullName, username, email, phone, referralCode });
-    return response.success(res, 201, 'Verification code sent to your email', result);
-  } catch (err) {
-    next(err);
-  }
-};
-
-const resendOtp = async (req, res, next) => {
-  try {
-    const { email } = req.body;
-    const result = await authService.resendOtp(email);
-    return response.success(res, 200, 'Verification code resent', result);
-  } catch (err) {
-    next(err);
-  }
-};
-
-const verifyOtp = async (req, res, next) => {
-  try {
-    const { email, code } = req.body;
-    const result = await authService.verifyOtp(email, code);
-    return response.success(res, 200, 'Account verified successfully', result);
+    const { fullName, username, email, phone, password, referralCode } = req.body;
+    const result = await authService.signup({ fullName, username, email, phone, password, referralCode });
+    return response.success(res, 201, 'Account created successfully', result);
   } catch (err) {
     next(err);
   }
@@ -35,19 +15,29 @@ const verifyOtp = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    const { email } = req.body;
-    const result = await authService.requestLogin(email);
-    return response.success(res, 200, 'Login code sent to your email', result);
+    const { email, password } = req.body;
+    const result = await authService.login(email, password);
+    return response.success(res, 200, 'Logged in successfully', result);
   } catch (err) {
     next(err);
   }
 };
 
-const verifyLogin = async (req, res, next) => {
+const forgotPassword = async (req, res, next) => {
   try {
-    const { email, code } = req.body;
-    const result = await authService.verifyLogin(email, code);
-    return response.success(res, 200, 'Logged in successfully', result);
+    const { email } = req.body;
+    const result = await authService.forgotPassword(email);
+    return response.success(res, 200, 'Password reset code sent to your email', result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    const result = await authService.resetPassword(email, code, newPassword);
+    return response.success(res, 200, 'Password reset successfully', result);
   } catch (err) {
     next(err);
   }
@@ -87,4 +77,4 @@ const appleLogin = async (req, res, next) => {
   }
 };
 
-module.exports = { signup, resendOtp, verifyOtp, login, verifyLogin, googleLogin, appleLogin };
+module.exports = { signup, login, forgotPassword, resetPassword, googleLogin, appleLogin };

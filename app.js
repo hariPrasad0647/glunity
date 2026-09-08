@@ -18,6 +18,7 @@ const storyRoutes = require('./modules/story/routes/story.routes');
 const contentRoutes = require('./modules/content/routes/content.routes');
 const pointsRoutes = require('./modules/points/routes/points.routes');
 const referralRoutes = require('./modules/referral/routes/referral.routes');
+const trustScoreRoutes = require('./modules/trust-score/routes/trust-score.routes');
 
 const app = express();
 
@@ -60,6 +61,7 @@ app.use('/api/stories', storyRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/points', pointsRoutes);
 app.use('/api/referrals', referralRoutes);
+app.use('/api/trust-score', trustScoreRoutes);
 
 app.use(errorHandler);
 

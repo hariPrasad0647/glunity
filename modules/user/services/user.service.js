@@ -14,6 +14,7 @@ const Bookmark = require('../../post/models/bookmark.model');
 const Repost = require('../../post/models/repost.model');
 const Reply = require('../../reply/models/reply.model');
 const { awardProfileSetup } = require('../../points/services/points.service');
+const { getTrustScore } = require('../../trust-score/services/trust-score.service');
 
 const FOLLOWER_ATTRS = ['id', 'username', 'fullName', 'profileImage'];
 
@@ -342,6 +343,8 @@ const getUserProfile = async (viewerId, targetId) => {
     else followStatus = 'none';
   }
 
+  const trustScoreData = await getTrustScore(targetId);
+
   return {
     ...target.toJSON(),
     postCount,
@@ -350,6 +353,8 @@ const getUserProfile = async (viewerId, targetId) => {
     followingCount,
     followStatus,
     isOwnProfile: isOwn,
+    trustScore: Math.round(trustScoreData.finalScore),
+    trustTier: trustScoreData.tier,
   };
 };
 

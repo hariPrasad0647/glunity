@@ -26,6 +26,12 @@ require('./modules/points/models/pointTransaction.model');
 // Referral models
 require('./modules/referral/models/referral.model');
 
+// Trust Score models
+require('./modules/trust-score/models/trust-score.model');
+require('./modules/trust-score/models/trust-score-history.model');
+
+const { initTrustScoreScheduler } = require('./modules/trust-score/cron/trust-score.cron');
+
 const PORT = process.env.PORT || 5000;
 
 const start = async () => {
@@ -60,6 +66,8 @@ const start = async () => {
 
     server.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
+      
+      initTrustScoreScheduler();
 
       // Keep Render free tier awake by self-pinging every 14 mins
       const url = process.env.RENDER_EXTERNAL_URL;

@@ -67,6 +67,10 @@ const start = async () => {
     await sequelize.sync({ alter: true });
     logger.info('Database connected');
 
+    // Backfill postId for old notifications (idempotent — only updates rows where postId IS NULL)
+    const backfillNotificationPostId = require('./migrations/004-backfill-notification-postId');
+    await backfillNotificationPostId().catch((err) => logger.error('Backfill failed:', err));
+
     server.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
       

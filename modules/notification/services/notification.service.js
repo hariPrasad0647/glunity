@@ -1,7 +1,7 @@
 const Notification = require('../models/notification.model');
 const User = require('../../user/models/user.model');
 
-const createNotification = async ({ recipientId, actorId, type, message, entityId, entityType, transaction }) => {
+const createNotification = async ({ recipientId, actorId, type, message, entityId, entityType, postId, transaction }) => {
   if (recipientId === actorId) {
     return null; // Do not notify yourself
   }
@@ -13,6 +13,7 @@ const createNotification = async ({ recipientId, actorId, type, message, entityI
     message,
     entityId,
     entityType,
+    postId: postId || null,
   }, { transaction });
 };
 

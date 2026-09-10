@@ -49,6 +49,7 @@ const toggleLike = async (userId, contentType, contentId) => {
         message: `${liker.fullName} liked your ${contentType}`,
         entityId: contentId,
         entityType: contentType.toUpperCase(),
+        postId: contentId,
       }).catch(console.error);
     }
   }
@@ -103,6 +104,7 @@ const repostContent = async (userId, contentType, contentId) => {
           message: `${reposter.fullName} reposted your ${contentType}`,
           entityId: contentId,
           entityType: contentType.toUpperCase(),
+          postId: contentId,
         }).catch(console.error);
       }
     }

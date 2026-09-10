@@ -96,6 +96,7 @@ const addReply = async (userId, contentType, contentId, text, parentId = null) =
           message: `${commenter.fullName} replied to your comment`,
           entityId: reply.id,
           entityType: 'REPLY',
+          postId: contentId,
         }).catch(console.error);
       }
     } else {
@@ -107,6 +108,7 @@ const addReply = async (userId, contentType, contentId, text, parentId = null) =
           message: `${commenter.fullName} commented on your ${contentType}`,
           entityId: reply.id,
           entityType: 'REPLY',
+          postId: contentId,
         }).catch(console.error);
       }
     }

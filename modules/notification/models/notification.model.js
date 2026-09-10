@@ -39,6 +39,11 @@ const Notification = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    postId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'The related post/reel ID for navigation (used by COMMENT, REPLY, LIKE, REPOST notifications)',
+    },
     isRead: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

@@ -223,7 +223,28 @@ const getHomeFeed = async (userId, { page = 1, limit = 10 } = {}) => {
     isOwn: item.author.id === userId
   }));
 
-  return { feed: paginated, page, limit, hasMore: items.length > offset + limit };
+  const hasMore = items.length > offset + limit;
+
+  let suggestions = [];
+  if (page === 1 || !hasMore) {
+    try {
+      const { getSuggestions } = require('../../user/services/user.service');
+      const { firstDegree, secondDegree, thirdDegree } = await getSuggestions(userId, 10);
+      suggestions = [...firstDegree, ...secondDegree, ...thirdDegree].slice(0, 10);
+    } catch (err) {
+      console.error("Error fetching suggestions for home feed:", err);
+    }
+  }
+
+  if (suggestions.length > 0) {
+    if (page === 1 && paginated.length >= 5) {
+      paginated.splice(5, 0, { type: 'suggestions', users: suggestions });
+    } else if (!hasMore) {
+      paginated.push({ type: 'suggestions', users: suggestions });
+    }
+  }
+
+  return { feed: paginated, page, limit, hasMore };
 };
 
 module.exports = { getFeed, getHomeFeed };

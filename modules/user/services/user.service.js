@@ -226,20 +226,20 @@ const getSuggestions = async (userId, limit = 20) => {
   });
   const followMeIds = followMeRows.map((f) => f.followerId);
 
-  // Mutual follows = friends
-  const myFriendIds = followMeIds.filter((id) => iFollowSet.has(id));
-
   // Every user ID I have ANY follow row with (any direction, any status)
-  const anyRelationRows = await Follow.findAll({
-    where: { [Op.or]: [{ followerId: userId }, { followingId: userId }] },
-    attributes: ['followerId', 'followingId'],
-    raw: true,
-  });
   const allConnectedIds = new Set([userId]);
-  anyRelationRows.forEach((f) => {
-    allConnectedIds.add(f.followerId);
-    allConnectedIds.add(f.followingId);
+  const connectionIds = new Set();
+  
+  iFollowIds.forEach((id) => {
+    allConnectedIds.add(id);
+    connectionIds.add(id);
   });
+  followMeIds.forEach((id) => {
+    allConnectedIds.add(id);
+    connectionIds.add(id);
+  });
+
+  const connectionIdArray = Array.from(connectionIds);
 
   // ── 1st degree ─────────────────────────────────────────────────────────────
   // People who already follow me but I haven't followed back yet
@@ -256,23 +256,33 @@ const getSuggestions = async (userId, limit = 20) => {
     : [];
 
   // ── 2nd degree ─────────────────────────────────────────────────────────────
-  // People my friends follow, not in any of my existing connections
+  // People my connections follow or who follow my connections, not in any of my existing connections
   let secondDegree = [];
-  if (myFriendIds.length) {
+  if (connectionIdArray.length) {
     const fofRows = await Follow.findAll({
       where: {
-        followerId: { [Op.in]: myFriendIds },
-        followingId: { [Op.notIn]: safeNotIn([...allConnectedIds]) },
+        [Op.or]: [
+          { followerId: { [Op.in]: connectionIdArray } },
+          { followingId: { [Op.in]: connectionIdArray } }
+        ]
       },
       attributes: ['followingId', 'followerId'],
       raw: true,
     });
 
-    // Count mutual friends per candidate
+    // Count mutual connections per candidate
     const mutualMap = {};
     fofRows.forEach(({ followingId, followerId }) => {
-      if (!mutualMap[followingId]) mutualMap[followingId] = new Set();
-      mutualMap[followingId].add(followerId);
+      // If the follower is our connection and the following is NOT connected to us
+      if (connectionIds.has(followerId) && !allConnectedIds.has(followingId)) {
+        if (!mutualMap[followingId]) mutualMap[followingId] = new Set();
+        mutualMap[followingId].add(followerId);
+      }
+      // If the following is our connection and the follower is NOT connected to us
+      if (connectionIds.has(followingId) && !allConnectedIds.has(followerId)) {
+        if (!mutualMap[followerId]) mutualMap[followerId] = new Set();
+        mutualMap[followerId].add(followingId);
+      }
     });
 
     const fofIds = Object.keys(mutualMap);
@@ -283,13 +293,13 @@ const getSuggestions = async (userId, limit = 20) => {
         limit,
       });
       secondDegree = users
-        .map((u) => ({ ...u.toJSON(), mutualFriendsCount: mutualMap[u.id]?.size || 0 }))
-        .sort((a, b) => b.mutualFriendsCount - a.mutualFriendsCount);
+        .map((u) => ({ ...u.toJSON(), mutualConnectionsCount: mutualMap[u.id]?.size || 0 }))
+        .sort((a, b) => b.mutualConnectionsCount - a.mutualConnectionsCount);
     }
   }
 
   // ── 3rd degree ─────────────────────────────────────────────────────────────
-  // People that 2nd-degree users follow, not already in my connections or 2nd degree
+  // People that 2nd-degree users follow or are followed by, not already in my connections or 2nd degree
   const secondDegreeIds = secondDegree.map((u) => u.id);
   const thirdExcludeIds = new Set([...allConnectedIds, ...secondDegreeIds]);
 
@@ -297,18 +307,28 @@ const getSuggestions = async (userId, limit = 20) => {
   if (secondDegreeIds.length) {
     const tofRows = await Follow.findAll({
       where: {
-        followerId: { [Op.in]: secondDegreeIds },
-        followingId: { [Op.notIn]: safeNotIn([...thirdExcludeIds]) },
+        [Op.or]: [
+          { followerId: { [Op.in]: secondDegreeIds } },
+          { followingId: { [Op.in]: secondDegreeIds } }
+        ]
       },
       attributes: ['followingId', 'followerId'],
       raw: true,
     });
 
-    // Count how many 2nd-degree connections follow each 3rd-degree candidate
+    // Count how many 2nd-degree connections interact with each 3rd-degree candidate
     const tofMap = {};
     tofRows.forEach(({ followingId, followerId }) => {
-      if (!tofMap[followingId]) tofMap[followingId] = new Set();
-      tofMap[followingId].add(followerId);
+      // Follower is 2nd degree, following is candidate
+      if (secondDegreeIds.includes(followerId) && !thirdExcludeIds.has(followingId)) {
+        if (!tofMap[followingId]) tofMap[followingId] = new Set();
+        tofMap[followingId].add(followerId);
+      }
+      // Following is 2nd degree, follower is candidate
+      if (secondDegreeIds.includes(followingId) && !thirdExcludeIds.has(followerId)) {
+        if (!tofMap[followerId]) tofMap[followerId] = new Set();
+        tofMap[followerId].add(followingId);
+      }
     });
 
     const tofIds = Object.keys(tofMap);

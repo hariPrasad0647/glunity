@@ -144,6 +144,17 @@ content: "Hello Glunity!"
         "id": "...",
         "caption": "...", // Reels use caption
         "author": {...}
+      },
+      {
+        "type": "suggestions",
+        "users": [
+          {
+            "id": "...",
+            "username": "...",
+            "fullName": "...",
+            "profileImage": "..."
+          }
+        ]
       }
     ],
     "total": 150,

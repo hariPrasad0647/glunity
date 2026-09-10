@@ -79,6 +79,17 @@ curl "https://your-api-domain/api/feed/home?page=1&limit=10" \
         "hasLiked": false,
         "hasSaved": false,
         "isOwn": false
+      },
+      {
+        "type": "suggestions",
+        "users": [
+          {
+            "id": "uuid",
+            "username": "suggested_user",
+            "fullName": "Suggested User",
+            "profileImage": null
+          }
+        ]
       }
     ],
     "page": 1,
@@ -88,7 +99,7 @@ curl "https://your-api-domain/api/feed/home?page=1&limit=10" \
 }
 ```
 
-> `type` is `"post"` or `"reel"`. Posts include `media[]` (image URLs); reels include `videoUrl`/`thumbnailUrl`. `isOwn` marks whether the item belongs to the viewer.
+> `type` is `"post"`, `"reel"`, or `"suggestions"`. Posts include `media[]` (image URLs); reels include `videoUrl`/`thumbnailUrl`. `suggestions` includes an array of `users`. `isOwn` marks whether the item belongs to the viewer.
 > `hasMore` indicates whether there are more items to fetch.
 
 ---

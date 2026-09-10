@@ -82,6 +82,13 @@ const buildAuthResponse = (user) => {
 };
 
 const signup = async ({ fullName, username, email, phone, password, referralCode }) => {
+  if (!fullName || !username || !email || !password) {
+    const missing = ['fullName', 'username', 'email', 'password'].filter(
+      (f) => !{ fullName, username, email, password }[f]
+    );
+    throw new ApiError(400, `Missing required fields: ${missing.join(', ')}`);
+  }
+
   // Block if an account already holds this email or username
   const existingUser = await User.findOne({
     where: { [Op.or]: [{ email }, { username }] },
@@ -128,6 +135,10 @@ const signup = async ({ fullName, username, email, phone, password, referralCode
 };
 
 const login = async (email, password) => {
+  if (!email || !password) {
+    throw new ApiError(400, 'Email and password are required');
+  }
+
   const user = await User.findOne({ where: { email } });
   if (!user) {
     throw new ApiError(404, 'No account found with this email');

@@ -7,7 +7,7 @@ Two new endpoints, both authenticated:
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /api/feed/home` | Instagram-style home screen — your own posts/reels first, then a chronological feed of who you follow |
+| `GET /api/feed/home` | Home screen feed — chronological feed of all posts and reels globally from everyone |
 | `GET /api/reels/discover` | Reels scroll screen — reels from **public accounts only** |
 
 ---
@@ -16,15 +16,14 @@ Two new endpoints, both authenticated:
 
 Home screen feed.
 
-- **`page=1`** returns the authenticated user's own recent posts + reels (newest first).
-- **`page=2` and beyond** returns posts + reels from accounts the user follows, in chronological order, newest first. Own content is excluded from these pages.
-- Client behavior: start at `page=1` on screen load, then increment `page` as the user scrolls to load more (following content).
+- Returns all posts and reels globally from everyone, in chronological order (newest first).
+- Client behavior: start at `page=1` on screen load, then increment `page` as the user scrolls to load more.
 
 **Query params**
 
 | Param | Default | Notes |
 |-------|---------|-------|
-| page | 1 | 1 = own content, 2+ = following content |
+| page | 1 | |
 | limit | 10 | items per page |
 
 **Request**
@@ -33,7 +32,7 @@ curl "https://your-api-domain/api/feed/home?page=1&limit=10" \
   -H "Authorization: Bearer <accessToken>"
 ```
 
-**Response 200 — page 1 (own content)**
+**Response 200**
 ```json
 {
   "success": true,
@@ -59,28 +58,7 @@ curl "https://your-api-domain/api/feed/home?page=1&limit=10" \
         "hasLiked": false,
         "hasSaved": false,
         "isOwn": true
-      }
-    ],
-    "page": 1,
-    "limit": 10,
-    "hasMore": true
-  }
-}
-```
-
-**Request — next page (following content)**
-```bash
-curl "https://your-api-domain/api/feed/home?page=2&limit=10" \
-  -H "Authorization: Bearer <accessToken>"
-```
-
-**Response 200 — page 2+ (following content)**
-```json
-{
-  "success": true,
-  "message": "Home feed fetched",
-  "data": {
-    "feed": [
+      },
       {
         "type": "reel",
         "id": "uuid",
@@ -88,12 +66,12 @@ curl "https://your-api-domain/api/feed/home?page=2&limit=10" \
         "createdAt": "2026-07-29T18:00:00.000Z",
         "author": {
           "id": "uuid",
-          "username": "friend_username",
-          "fullName": "A Friend",
+          "username": "some_user",
+          "fullName": "Some User",
           "profileImage": null
         },
-        "videoUrl": "https://cdn.example.com/reels/videos/friend_1.mp4",
-        "thumbnailUrl": "https://cdn.example.com/reels/thumbnails/friend_1.jpg",
+        "videoUrl": "https://cdn.example.com/reels/videos/user_1.mp4",
+        "thumbnailUrl": "https://cdn.example.com/reels/thumbnails/user_1.jpg",
         "hashtags": [],
         "mentions": [],
         "likeCount": 12,
@@ -103,7 +81,7 @@ curl "https://your-api-domain/api/feed/home?page=2&limit=10" \
         "isOwn": false
       }
     ],
-    "page": 2,
+    "page": 1,
     "limit": 10,
     "hasMore": true
   }
@@ -111,7 +89,7 @@ curl "https://your-api-domain/api/feed/home?page=2&limit=10" \
 ```
 
 > `type` is `"post"` or `"reel"`. Posts include `media[]` (image URLs); reels include `videoUrl`/`thumbnailUrl`. `isOwn` marks whether the item belongs to the viewer.
-> `hasMore` on page 1 indicates whether the user follows anyone (i.e. whether page 2 will have content). On page 2+ it reflects normal pagination.
+> `hasMore` indicates whether there are more items to fetch.
 
 ---
 

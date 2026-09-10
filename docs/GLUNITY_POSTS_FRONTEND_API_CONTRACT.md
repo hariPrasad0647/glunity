@@ -117,8 +117,7 @@ content: "Hello Glunity!"
 - **Authentication:** `Bearer <accessToken>`
 - **Query Parameters:** `?page=1&limit=10`
 - **Behavior:** 
-  - Page 1 uniquely returns the authenticated user's own posts and reels.
-  - Page 2+ returns a chronological feed of posts and reels from followed users.
+  - Returns a global chronological feed of posts and reels from all users.
 
 ### B. Standard Feed
 - **Method:** `GET`

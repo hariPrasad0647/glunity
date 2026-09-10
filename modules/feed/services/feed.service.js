@@ -207,33 +207,21 @@ const getHomeFeed = async (userId, { page = 1, limit = 10 } = {}) => {
   page = Math.max(1, page);
   limit = Math.max(1, limit);
 
-  if (page === 1) {
-    const [posts, reels] = await Promise.all([
-      Post.findAll({ where: { userId }, include: postIncludes, order: [['createdAt', 'DESC']], limit }),
-      Reel.findAll({ where: { userId }, include: reelIncludes, order: [['createdAt', 'DESC']], limit }),
-    ]);
-    const items = (await attachHomeStats(userId, posts, reels)).slice(0, limit).map((item) => ({ ...item, isOwn: true }));
-
-    const followingCount = await Follow.count({ where: { followerId: userId } });
-
-    return { feed: items, page, limit, hasMore: followingCount > 0 };
-  }
-
-  const followingRows = await Follow.findAll({ where: { followerId: userId }, attributes: ['followingId'], raw: true });
-  const followingIds = followingRows.map((f) => f.followingId);
-  if (followingIds.length === 0) return { feed: [], page, limit, hasMore: false };
-
-  const offset = (page - 2) * limit;
-  const fetchLimit = offset + limit * HOME_FETCH_MULTIPLIER;
-  const where = { userId: { [Op.in]: followingIds } };
+  const offset = (page - 1) * limit;
+  const fetchLimit = offset + limit;
 
   const [posts, reels] = await Promise.all([
-    Post.findAll({ where, include: postIncludes, order: [['createdAt', 'DESC']], limit: fetchLimit }),
-    Reel.findAll({ where, include: reelIncludes, order: [['createdAt', 'DESC']], limit: fetchLimit }),
+    Post.findAll({ include: postIncludes, order: [['createdAt', 'DESC']], limit: fetchLimit }),
+    Reel.findAll({ include: reelIncludes, order: [['createdAt', 'DESC']], limit: fetchLimit }),
   ]);
 
   const items = await attachHomeStats(userId, posts, reels);
-  const paginated = items.slice(offset, offset + limit).map((item) => ({ ...item, isOwn: false }));
+  
+  // Sort items by createdAt descending (already done in attachHomeStats, but just to be sure)
+  const paginated = items.slice(offset, offset + limit).map((item) => ({
+    ...item,
+    isOwn: item.author.id === userId
+  }));
 
   return { feed: paginated, page, limit, hasMore: items.length > offset + limit };
 };

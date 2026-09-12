@@ -14,6 +14,7 @@ const {
   likePostController,
   bookmarkPostController,
   repostPostController,
+  viewPostController,
 } = require('../controllers/post.controller');
 const {
   addReplyController,
@@ -43,6 +44,9 @@ router.post('/:id/bookmark', auth, uuidParam('id'), validate, bookmarkPostContro
 
 // POST /api/posts/:id/repost
 router.post('/:id/repost', auth, uuidParam('id'), validate, repostPostController);
+
+// POST /api/posts/:id/view
+router.post('/:id/view', auth, uuidParam('id'), validate, viewPostController);
 
 // Replies
 router.get('/:id/replies', auth, uuidParam('id'), validate, setPost, getRepliesController);

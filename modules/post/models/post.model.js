@@ -53,6 +53,11 @@ const Post = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    viewCount: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     tableName: 'posts',

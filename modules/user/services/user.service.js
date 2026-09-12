@@ -457,13 +457,15 @@ const getUserPosts = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
 
   const postIds = posts.map((p) => p.id);
 
-  const [likeRows, saveRows, shareRows, commentRows, viewerLikeRows, viewerSaveRows] = await Promise.all([
+  const [likeRows, saveRows, shareRows, commentRows, viewerLikeRows, viewerSaveRows, viewerRepostRows, viewerCommentRows] = await Promise.all([
     Like.findAll({ where: { contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
     Bookmark.findAll({ where: { contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
     Repost.findAll({ where: { contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
     Reply.findAll({ where: { contentType: 'post', contentId: { [Op.in]: postIds }, parentId: null, isDeleted: false }, attributes: ['contentId'], raw: true }),
     Like.findAll({ where: { userId: viewerId, contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
     Bookmark.findAll({ where: { userId: viewerId, contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
+    Repost.findAll({ where: { userId: viewerId, contentType: 'post', contentId: { [Op.in]: postIds } }, attributes: ['contentId'], raw: true }),
+    Reply.findAll({ where: { userId: viewerId, contentType: 'post', contentId: { [Op.in]: postIds }, isDeleted: false }, attributes: ['contentId'], raw: true }),
   ]);
 
   const likeCounts = likeRows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});
@@ -472,6 +474,8 @@ const getUserPosts = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
   const commentCounts = commentRows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});
   const viewerLikedSet = new Set(viewerLikeRows.map((r) => r.contentId));
   const viewerSavedSet = new Set(viewerSaveRows.map((r) => r.contentId));
+  const viewerRepostedSet = new Set(viewerRepostRows.map((r) => r.contentId));
+  const viewerCommentedSet = new Set(viewerCommentRows.map((r) => r.contentId));
 
   const formatted = posts.map((post) => ({
     type: 'post',
@@ -483,11 +487,14 @@ const getUserPosts = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
     hashtags: post.hashtags.map((h) => h.name),
     mentions: post.mentions.map((m) => ({ id: m.mentionedUser.id, username: m.mentionedUser.username, profileImage: m.mentionedUser.profileImage || null })),
     likeCount: likeCounts[post.id] || 0,
-    saveCount: saveCounts[post.id] || 0,
-    shareCount: shareCounts[post.id] || 0,
+    bookmarkCount: saveCounts[post.id] || 0,
+    repostCount: shareCounts[post.id] || 0,
     commentCount: commentCounts[post.id] || 0,
+    viewCount: post.viewCount || 0,
     hasLiked: viewerLikedSet.has(post.id),
-    hasSaved: viewerSavedSet.has(post.id),
+    hasBookmarked: viewerSavedSet.has(post.id),
+    hasReposted: viewerRepostedSet.has(post.id),
+    hasCommented: viewerCommentedSet.has(post.id),
   }));
 
   return { canView: true, posts: formatted, total: count, page, limit };
@@ -518,13 +525,15 @@ const getUserReels = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
 
   const reelIds = reels.map((r) => r.id);
 
-  const [likeRows, saveRows, shareRows, commentRows, viewerLikeRows, viewerSaveRows] = await Promise.all([
+  const [likeRows, saveRows, shareRows, commentRows, viewerLikeRows, viewerSaveRows, viewerRepostRows, viewerCommentRows] = await Promise.all([
     Like.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
     Bookmark.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
     Repost.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
     Reply.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds }, parentId: null, isDeleted: false }, attributes: ['contentId'], raw: true }),
     Like.findAll({ where: { userId: viewerId, contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
     Bookmark.findAll({ where: { userId: viewerId, contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
+    Repost.findAll({ where: { userId: viewerId, contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
+    Reply.findAll({ where: { userId: viewerId, contentType: 'reel', contentId: { [Op.in]: reelIds }, isDeleted: false }, attributes: ['contentId'], raw: true }),
   ]);
 
   const likeCounts = likeRows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});
@@ -533,6 +542,8 @@ const getUserReels = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
   const commentCounts = commentRows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});
   const viewerLikedSet = new Set(viewerLikeRows.map((r) => r.contentId));
   const viewerSavedSet = new Set(viewerSaveRows.map((r) => r.contentId));
+  const viewerRepostedSet = new Set(viewerRepostRows.map((r) => r.contentId));
+  const viewerCommentedSet = new Set(viewerCommentRows.map((r) => r.contentId));
 
   const formatted = reels.map((reel) => ({
     type: 'reel',
@@ -545,11 +556,14 @@ const getUserReels = async (viewerId, targetId, { page = 1, limit = 12 } = {}) =
     hashtags: reel.hashtags.map((h) => h.name),
     mentions: reel.mentions.map((m) => ({ id: m.mentionedUser.id, username: m.mentionedUser.username, profileImage: m.mentionedUser.profileImage || null })),
     likeCount: likeCounts[reel.id] || 0,
-    saveCount: saveCounts[reel.id] || 0,
-    shareCount: shareCounts[reel.id] || 0,
+    bookmarkCount: saveCounts[reel.id] || 0,
+    repostCount: shareCounts[reel.id] || 0,
     commentCount: commentCounts[reel.id] || 0,
+    viewCount: reel.viewCount || 0,
     hasLiked: viewerLikedSet.has(reel.id),
-    hasSaved: viewerSavedSet.has(reel.id),
+    hasBookmarked: viewerSavedSet.has(reel.id),
+    hasReposted: viewerRepostedSet.has(reel.id),
+    hasCommented: viewerCommentedSet.has(reel.id),
   }));
 
   return { canView: true, reels: formatted, total: count, page, limit };

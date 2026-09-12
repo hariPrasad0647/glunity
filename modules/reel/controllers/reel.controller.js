@@ -1,4 +1,4 @@
-const { createReel, getReelById, formatReel, getPublicReelsFeed } = require('../services/reel.service');
+const { createReel, getReelById, formatReel, getPublicReelsFeed, recordView } = require('../services/reel.service');
 const {
   toggleLike,
   toggleBookmark,
@@ -73,6 +73,16 @@ const repostReelController = async (req, res, next) => {
   }
 };
 
+const viewReelController = async (req, res, next) => {
+  try {
+    const result = await recordView(req.params.id);
+    return success(res, 200, 'Reel view recorded', result);
+  } catch (err) {
+    if (err.status) return error(res, err.status, err.message);
+    next(err);
+  }
+};
+
 module.exports = {
   createReelController,
   getPublicReelsController,
@@ -80,4 +90,5 @@ module.exports = {
   likeReelController,
   bookmarkReelController,
   repostReelController,
+  viewReelController,
 };

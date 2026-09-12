@@ -81,8 +81,15 @@ const toggleBookmark = async (userId, contentType, contentId) => {
 // ── Repost ─────────────────────────────────────────────────────────────────────
 
 const repostContent = async (userId, contentType, contentId) => {
-  await findContent(contentType, contentId);
-  const [, created] = await Repost.findOrCreate({ where: { userId, contentType, contentId } });
+  const content = await findContent(contentType, contentId);
+  const existing = await Repost.findOne({ where: { userId, contentType, contentId } });
+
+  if (existing) {
+    await existing.destroy();
+  } else {
+    await Repost.create({ userId, contentType, contentId });
+  }
+
   const repostCount = await Repost.count({ where: { contentType, contentId } });
   
   if (contentType === 'post') {
@@ -90,8 +97,7 @@ const repostContent = async (userId, contentType, contentId) => {
   }
 
   // Award REPOST points only when a new repost row is created
-  // repost → undo → repost cycles are prevented by the Repost unique index
-  if (created) {
+  if (!existing) {
     awardRepost(userId, contentId).catch(() => {});
 
     if (content.userId && content.userId !== userId) {
@@ -110,19 +116,24 @@ const repostContent = async (userId, contentType, contentId) => {
     }
   }
   
-  return { repostCount };
+  return { reposted: !existing, repostCount };
 };
 
 // ── Stats (used by GET post/reel endpoints) ───────────────────────────────────
 
 const getInteractionStats = async (contentType, contentId, viewerId = null) => {
-  const [likeCount, bookmarkCount, repostCount, commentCount, likeRow, bookmarkRow] = await Promise.all([
+  const [
+    likeCount, bookmarkCount, repostCount, commentCount, 
+    likeRow, bookmarkRow, repostRow, commentRow
+  ] = await Promise.all([
     Like.count({ where: { contentType, contentId } }),
     Bookmark.count({ where: { contentType, contentId } }),
     Repost.count({ where: { contentType, contentId } }),
     Reply.count({ where: { contentType, contentId, parentId: null, isDeleted: false } }),
     viewerId ? Like.findOne({ where: { userId: viewerId, contentType, contentId } }) : null,
     viewerId ? Bookmark.findOne({ where: { userId: viewerId, contentType, contentId } }) : null,
+    viewerId ? Repost.findOne({ where: { userId: viewerId, contentType, contentId } }) : null,
+    viewerId ? Reply.findOne({ where: { userId: viewerId, contentType, contentId, isDeleted: false } }) : null,
   ]);
   return {
     likeCount,
@@ -131,6 +142,8 @@ const getInteractionStats = async (contentType, contentId, viewerId = null) => {
     commentCount,
     hasLiked: !!likeRow,
     hasBookmarked: !!bookmarkRow,
+    hasReposted: !!repostRow,
+    hasCommented: !!commentRow,
   };
 };
 

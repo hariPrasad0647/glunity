@@ -37,8 +37,11 @@ const formatPost = (post, stats = {}) => ({
   bookmarkCount: stats.bookmarkCount ?? 0,
   repostCount: stats.repostCount ?? 0,
   commentCount: stats.commentCount ?? 0,
+  viewCount: post.viewCount || 0,
   hasLiked: stats.hasLiked ?? false,
   hasBookmarked: stats.hasBookmarked ?? false,
+  hasReposted: stats.hasReposted ?? false,
+  hasCommented: stats.hasCommented ?? false,
 });
 
 const getPostById = async (postId) => {
@@ -118,4 +121,15 @@ const deletePost = async (userId, postId) => {
   return { success: true };
 };
 
-module.exports = { createPost, getPostById, formatPost, deletePost };
+const recordView = async (postId) => {
+  const post = await Post.findByPk(postId);
+  if (!post) {
+    const error = new Error('Post not found');
+    error.status = 404;
+    throw error;
+  }
+  await post.increment('viewCount', { by: 1 });
+  return { success: true };
+};
+
+module.exports = { createPost, getPostById, formatPost, deletePost, recordView };

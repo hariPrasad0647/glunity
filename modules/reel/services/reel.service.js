@@ -6,6 +6,8 @@ const ReelMention = require('../models/reel_mention.model');
 const Hashtag = require('../../post/models/hashtag.model');
 const Like = require('../../post/models/like.model');
 const Save = require('../../post/models/bookmark.model');
+const Repost = require('../../post/models/repost.model');
+const Reply = require('../../reply/models/reply.model');
 
 const extractHashtags = (text) => {
   const matches = text.match(/#([a-zA-Z0-9_]+)/g) || [];
@@ -36,11 +38,14 @@ const formatReel = (reel, stats = {}) => ({
     profileImage: m.mentionedUser.profileImage || null,
   })),
   likeCount: stats.likeCount ?? 0,
-  saveCount: stats.saveCount ?? 0,
-  shareCount: stats.shareCount ?? 0,
+  bookmarkCount: stats.bookmarkCount ?? 0,
+  repostCount: stats.repostCount ?? 0,
   commentCount: stats.commentCount ?? 0,
+  viewCount: reel.viewCount || 0,
   hasLiked: stats.hasLiked ?? false,
-  hasSaved: stats.hasSaved ?? false,
+  hasBookmarked: stats.hasBookmarked ?? false,
+  hasReposted: stats.hasReposted ?? false,
+  hasCommented: stats.hasCommented ?? false,
 });
 
 const getReelById = async (reelId) => {
@@ -118,19 +123,28 @@ const getPublicReelsFeed = async (viewerId, { page = 1, limit = 10 } = {}) => {
 
   const reelIds = reels.map((r) => r.id);
 
-  const [likeRows, saveRows, viewerLikeRows, viewerSaveRows] = await Promise.all([
+  const [likeRows, saveRows, shareRows, commentRows, viewerLikeRows, viewerSaveRows, viewerRepostRows, viewerCommentRows] = await Promise.all([
     Like.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
     Save.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
+    Repost.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
+    Reply.findAll({ where: { contentType: 'reel', contentId: { [Op.in]: reelIds }, parentId: null, isDeleted: false }, attributes: ['contentId'], raw: true }),
     Like.findAll({ where: { userId: viewerId, contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
     Save.findAll({ where: { userId: viewerId, contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
+    Repost.findAll({ where: { userId: viewerId, contentType: 'reel', contentId: { [Op.in]: reelIds } }, attributes: ['contentId'], raw: true }),
+    Reply.findAll({ where: { userId: viewerId, contentType: 'reel', contentId: { [Op.in]: reelIds }, isDeleted: false }, attributes: ['contentId'], raw: true }),
   ]);
 
   const likeCounts = likeRows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});
   const saveCounts = saveRows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});
+  const shareCounts = shareRows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});
+  const commentCounts = commentRows.reduce((m, r) => { m[r.contentId] = (m[r.contentId] || 0) + 1; return m; }, {});
   const viewerLikedSet = new Set(viewerLikeRows.map((r) => r.contentId));
   const viewerSavedSet = new Set(viewerSaveRows.map((r) => r.contentId));
+  const viewerRepostedSet = new Set(viewerRepostRows.map((r) => r.contentId));
+  const viewerCommentedSet = new Set(viewerCommentRows.map((r) => r.contentId));
 
   const formatted = reels.map((reel) => ({
+    type: 'reel',
     id: reel.id,
     videoUrl: reel.videoUrl,
     thumbnailUrl: reel.thumbnailUrl || null,
@@ -140,12 +154,28 @@ const getPublicReelsFeed = async (viewerId, { page = 1, limit = 10 } = {}) => {
     hashtags: reel.hashtags.map((h) => h.name),
     mentions: reel.mentions.map((m) => ({ id: m.mentionedUser.id, username: m.mentionedUser.username, profileImage: m.mentionedUser.profileImage || null })),
     likeCount: likeCounts[reel.id] || 0,
-    saveCount: saveCounts[reel.id] || 0,
+    bookmarkCount: saveCounts[reel.id] || 0,
+    repostCount: shareCounts[reel.id] || 0,
+    commentCount: commentCounts[reel.id] || 0,
+    viewCount: reel.viewCount || 0,
     hasLiked: viewerLikedSet.has(reel.id),
-    hasSaved: viewerSavedSet.has(reel.id),
+    hasBookmarked: viewerSavedSet.has(reel.id),
+    hasReposted: viewerRepostedSet.has(reel.id),
+    hasCommented: viewerCommentedSet.has(reel.id),
   }));
 
   return { reels: formatted, total: count, page, limit, hasMore: offset + limit < count };
 };
 
-module.exports = { createReel, getReelById, formatReel, getPublicReelsFeed };
+const recordView = async (reelId) => {
+  const reel = await Reel.findByPk(reelId);
+  if (!reel) {
+    const error = new Error('Reel not found');
+    error.status = 404;
+    throw error;
+  }
+  await reel.increment('viewCount', { by: 1 });
+  return { success: true };
+};
+
+module.exports = { createReel, getReelById, formatReel, getPublicReelsFeed, recordView };

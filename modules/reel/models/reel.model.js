@@ -34,6 +34,11 @@ const Reel = sequelize.define(
       allowNull: false,
       defaultValue: false,
     },
+    viewCount: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     tableName: 'reels',

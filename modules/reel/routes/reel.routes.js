@@ -14,6 +14,7 @@ const {
   likeReelController,
   bookmarkReelController,
   repostReelController,
+  viewReelController,
 } = require('../controllers/reel.controller');
 const {
   addReplyController,
@@ -43,6 +44,9 @@ router.post('/:id/bookmark', auth, uuidParam('id'), validate, bookmarkReelContro
 
 // POST /api/reels/:id/repost
 router.post('/:id/repost', auth, uuidParam('id'), validate, repostReelController);
+
+// POST /api/reels/:id/view
+router.post('/:id/view', auth, uuidParam('id'), validate, viewReelController);
 
 // Replies
 router.get('/:id/replies', auth, uuidParam('id'), validate, setReel, getRepliesController);

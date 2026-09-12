@@ -1,4 +1,4 @@
-const { createPost, getPostById, formatPost, deletePost } = require('../services/post.service');
+const { createPost, getPostById, formatPost, deletePost, recordView } = require('../services/post.service');
 const {
   toggleLike,
   toggleBookmark,
@@ -71,6 +71,16 @@ const repostPostController = async (req, res, next) => {
   }
 };
 
+const viewPostController = async (req, res, next) => {
+  try {
+    const result = await recordView(req.params.id);
+    return success(res, 200, 'Post view recorded', result);
+  } catch (err) {
+    if (err.status) return error(res, err.status, err.message);
+    next(err);
+  }
+};
+
 module.exports = {
   createPostController,
   getPostController,
@@ -78,4 +88,5 @@ module.exports = {
   likePostController,
   bookmarkPostController,
   repostPostController,
+  viewPostController,
 };

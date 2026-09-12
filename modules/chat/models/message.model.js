@@ -47,6 +47,11 @@ const Message = sequelize.define(
       references: { model: 'messages', key: 'id' },
       onDelete: 'SET NULL',
     },
+    status: {
+      type: DataTypes.ENUM('sent', 'seen'),
+      allowNull: false,
+      defaultValue: 'sent',
+    },
     isDeleted: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

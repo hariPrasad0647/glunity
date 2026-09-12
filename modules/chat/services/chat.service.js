@@ -257,6 +257,17 @@ const markAsRead = async (conversationId, userId) => {
     { lastReadAt: new Date() },
     { where: { conversationId, userId } }
   );
+
+  await Message.update(
+    { status: 'seen' },
+    {
+      where: {
+        conversationId,
+        senderId: { [Op.ne]: userId },
+        status: 'sent',
+      },
+    }
+  );
 };
 
 const deleteMessage = async (messageId, userId) => {

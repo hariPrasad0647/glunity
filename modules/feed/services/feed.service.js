@@ -247,4 +247,35 @@ const getHomeFeed = async (userId, { page = 1, limit = 10 } = {}) => {
   return { feed: paginated, page, limit, hasMore };
 };
 
-module.exports = { getFeed, getHomeFeed };
+const getFollowingFeed = async (userId, { page = 1, limit = 10 } = {}) => {
+  page = Math.max(1, page);
+  limit = Math.max(1, limit);
+
+  const offset = (page - 1) * limit;
+  const fetchLimit = offset + limit;
+
+  const followingRows = await Follow.findAll({ where: { followerId: userId }, attributes: ['followingId'], raw: true });
+  const followingIds = followingRows.map((f) => f.followingId);
+
+  if (followingIds.length === 0) {
+    return { feed: [], page, limit, hasMore: false };
+  }
+
+  const [posts, reels] = await Promise.all([
+    Post.findAll({ where: { userId: { [Op.in]: followingIds } }, include: postIncludes, order: [['createdAt', 'DESC']], limit: fetchLimit }),
+    Reel.findAll({ where: { userId: { [Op.in]: followingIds } }, include: reelIncludes, order: [['createdAt', 'DESC']], limit: fetchLimit }),
+  ]);
+
+  const items = await attachHomeStats(userId, posts, reels);
+  
+  const paginated = items.slice(offset, offset + limit).map((item) => ({
+    ...item,
+    isFromFollowing: true
+  }));
+
+  const hasMore = items.length > offset + limit;
+
+  return { feed: paginated, page, limit, hasMore };
+};
+
+module.exports = { getFeed, getHomeFeed, getFollowingFeed };

@@ -1,4 +1,4 @@
-const { getFeed, getHomeFeed } = require('../services/feed.service');
+const { getFeed, getHomeFeed, getFollowingFeed } = require('../services/feed.service');
 const { success } = require('../../../utils/response');
 
 const getFeedController = async (req, res, next) => {
@@ -23,4 +23,15 @@ const getHomeFeedController = async (req, res, next) => {
   }
 };
 
-module.exports = { getFeedController, getHomeFeedController };
+const getFollowingFeedController = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const result = await getFollowingFeed(req.user.id, { page, limit });
+    return success(res, 200, 'Following feed fetched', result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getFeedController, getHomeFeedController, getFollowingFeedController };

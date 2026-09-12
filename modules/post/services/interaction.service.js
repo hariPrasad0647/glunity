@@ -191,6 +191,36 @@ const getMyLikedReels = async (userId, { page = 1, limit = 12 } = {}) => {
   return reels.filter(Boolean).map((r) => formatReel(r));
 };
 
+const getUserRepostedPosts = async (userId, { page = 1, limit = 12 } = {}) => {
+  const { getPostById, formatPost } = require('./post.service');
+  const offset = (page - 1) * limit;
+  const reposts = await Repost.findAll({
+    where: { userId, contentType: 'post' },
+    attributes: ['contentId'],
+    order: [['createdAt', 'DESC']],
+    offset,
+    limit,
+    raw: true,
+  });
+  const posts = await Promise.all(reposts.map(({ contentId }) => getPostById(contentId)));
+  return posts.filter(Boolean).map((p) => formatPost(p));
+};
+
+const getUserRepostedReels = async (userId, { page = 1, limit = 12 } = {}) => {
+  const { getReelById, formatReel } = require('../../reel/services/reel.service');
+  const offset = (page - 1) * limit;
+  const reposts = await Repost.findAll({
+    where: { userId, contentType: 'reel' },
+    attributes: ['contentId'],
+    order: [['createdAt', 'DESC']],
+    offset,
+    limit,
+    raw: true,
+  });
+  const reels = await Promise.all(reposts.map(({ contentId }) => getReelById(contentId)));
+  return reels.filter(Boolean).map((r) => formatReel(r));
+};
+
 module.exports = {
   toggleLike,
   toggleBookmark,
@@ -200,4 +230,6 @@ module.exports = {
   getSavedReels,
   getMyLikedPosts,
   getMyLikedReels,
+  getUserRepostedPosts,
+  getUserRepostedReels,
 };

@@ -31,6 +31,10 @@ const {
   getMyLikedPostsController,
   getMyLikedReelsController,
   getMyCommentsController,
+  getMyRepostedPostsController,
+  getMyRepostedReelsController,
+  getUserRepostedPostsController,
+  getUserRepostedReelsController,
 } = require('../controllers/user.controller');
 
 // PATCH /api/users/profile
@@ -80,6 +84,8 @@ router.get('/me/reels', auth, getMyReelsController);
 // ── My Activity ─────────────────────────────────────────────────────────────
 router.get('/me/liked/posts', auth, getMyLikedPostsController);
 router.get('/me/liked/reels', auth, getMyLikedReelsController);
+router.get('/me/reposted/posts', auth, getMyRepostedPostsController);
+router.get('/me/reposted/reels', auth, getMyRepostedReelsController);
 router.get('/me/comments', auth, getMyCommentsController);
 
 // ── Public profile viewing ────────────────────────────────────────────────────
@@ -93,6 +99,12 @@ router.get('/:id/posts', auth, uuidParam('id'), validate, getUserPostsController
 
 // GET /api/users/:id/reels
 router.get('/:id/reels', auth, uuidParam('id'), validate, getUserReelsController);
+
+// GET /api/users/:id/reposted/posts
+router.get('/:id/reposted/posts', auth, uuidParam('id'), validate, getUserRepostedPostsController);
+
+// GET /api/users/:id/reposted/reels
+router.get('/:id/reposted/reels', auth, uuidParam('id'), validate, getUserRepostedReelsController);
 
 // GET /api/users/:id/followers
 router.get('/:id/followers', auth, uuidParam('id'), validate, getUserFollowersController);

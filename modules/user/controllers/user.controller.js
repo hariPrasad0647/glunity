@@ -16,7 +16,7 @@ const {
   getUserReels,
   getMyProfile,
 } = require('../services/user.service');
-const { getSavedPosts, getSavedReels, getMyLikedPosts, getMyLikedReels } = require('../../post/services/interaction.service');
+const { getSavedPosts, getSavedReels, getMyLikedPosts, getMyLikedReels, getUserRepostedPosts, getUserRepostedReels } = require('../../post/services/interaction.service');
 const { getMyComments } = require('../../reply/services/reply.service');
 const { success, error } = require('../../../utils/response');
 
@@ -280,6 +280,50 @@ const getUserReelsController = async (req, res, next) => {
   }
 };
 
+const getMyRepostedPostsController = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const posts = await getUserRepostedPosts(req.user.id, { page, limit });
+    return success(res, 200, 'Reposted posts fetched', { posts });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getMyRepostedReelsController = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const reels = await getUserRepostedReels(req.user.id, { page, limit });
+    return success(res, 200, 'Reposted reels fetched', { reels });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getUserRepostedPostsController = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const posts = await getUserRepostedPosts(req.params.id, { page, limit });
+    return success(res, 200, 'Reposted posts fetched', { posts });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getUserRepostedReelsController = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const reels = await getUserRepostedReels(req.params.id, { page, limit });
+    return success(res, 200, 'Reposted reels fetched', { reels });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   updateProfileController,
   saveInterestsController,
@@ -304,4 +348,8 @@ module.exports = {
   getMyLikedPostsController,
   getMyLikedReelsController,
   getMyCommentsController,
+  getMyRepostedPostsController,
+  getMyRepostedReelsController,
+  getUserRepostedPostsController,
+  getUserRepostedReelsController,
 };

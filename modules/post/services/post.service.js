@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const User = require('../../user/models/user.model');
 const Post = require('../models/post.model');
 const PostMedia = require('../models/post_media.model');
@@ -63,6 +64,24 @@ const getPostById = async (postId) => {
 };
 
 const createPost = async (userId, { content }, cdnUrls = []) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const postCount = await Post.count({
+    where: {
+      userId,
+      createdAt: {
+        [Op.gte]: today,
+      },
+    },
+  });
+
+  if (postCount >= 3) {
+    const error = new Error('You can only post up to 3 times per day');
+    error.status = 403;
+    throw error;
+  }
+
   const post = await Post.create({ userId, content: content || null });
 
   // Store media in order

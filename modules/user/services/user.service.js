@@ -343,6 +343,7 @@ const getSuggestions = async (userId, limit = 20) => {
         .map((u) => ({ ...u.toJSON(), mutualConnectionsCount: tofMap[u.id]?.size || 0 }))
         .sort((a, b) => b.mutualConnectionsCount - a.mutualConnectionsCount);
     }
+  }
   // ── Fallback ───────────────────────────────────────────────────────────────
   // If we don't have enough suggestions (e.g. cold start), add some recent users
   const totalFound = firstDegree.length + secondDegree.length + thirdDegree.length;

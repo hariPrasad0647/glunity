@@ -17,6 +17,7 @@ const {
   getFollowingController,
   getFriendsController,
   getSuggestionsController,
+  getUnfollowedUsersController,
   getSavedPostsController,
   getSavedReelsController,
   getUserProfileController,
@@ -61,6 +62,7 @@ router.get('/followers', auth, getFollowersController);
 router.get('/following', auth, getFollowingController);
 router.get('/friends', auth, getFriendsController);
 router.get('/suggestions', auth, getSuggestionsController);
+router.get('/unfollowed', auth, getUnfollowedUsersController);
 
 // GET /api/users/search?q=...
 router.get('/search', auth, requiredQuery('q'), validate, searchUsersController);

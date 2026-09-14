@@ -13,6 +13,7 @@ const Like = require('../../post/models/like.model');
 const Bookmark = require('../../post/models/bookmark.model');
 const Repost = require('../../post/models/repost.model');
 const Reply = require('../../reply/models/reply.model');
+const TrustScore = require('../../trust-score/models/trust-score.model');
 const { awardProfileSetup } = require('../../points/services/points.service');
 const { getTrustScore } = require('../../trust-score/services/trust-score.service');
 const { createNotification } = require('../../notification/services/notification.service');
@@ -370,6 +371,48 @@ const getSuggestions = async (userId, limit = 20) => {
   return { firstDegree, secondDegree, thirdDegree };
 };
 
+// ── Unfollowed Users by Trust Score ──────────────────────────────────────────
+
+const getUnfollowedUsersByTrustScore = async (userId, page = 1, limit = 20) => {
+  const iFollowRows = await Follow.findAll({
+    where: { followerId: userId },
+    attributes: ['followingId'],
+    raw: true,
+  });
+  const iFollowIds = iFollowRows.map((f) => f.followingId);
+  const excludeIds = [...iFollowIds, userId];
+
+  const offset = (page - 1) * limit;
+
+  const users = await User.findAndCountAll({
+    where: {
+      id: { [Op.notIn]: safeNotIn(excludeIds) },
+    },
+    include: [
+      {
+        model: TrustScore,
+        as: 'trustScore',
+        attributes: ['finalScore', 'tier'],
+      },
+    ],
+    order: [
+      [{ model: TrustScore, as: 'trustScore' }, 'finalScore', 'DESC'],
+      ['createdAt', 'DESC']
+    ],
+    limit,
+    offset,
+    attributes: FOLLOWER_ATTRS,
+  });
+
+  return {
+    total: users.count,
+    page,
+    limit,
+    totalPages: Math.ceil(users.count / limit),
+    users: users.rows,
+  };
+};
+
 // ── Profile viewing ────────────────────────────────────────────────────────────
 
 const isFollowing = async (viewerId, targetId) => {
@@ -618,6 +661,7 @@ module.exports = {
   getUserFollowing,
   getFriends,
   getSuggestions,
+  getUnfollowedUsersByTrustScore,
   getUserProfile,
   searchUsers,
   getUserPosts,

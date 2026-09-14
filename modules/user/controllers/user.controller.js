@@ -10,6 +10,7 @@ const {
   getUserFollowing,
   getFriends,
   getSuggestions,
+  getUnfollowedUsersByTrustScore,
   getUserProfile,
   searchUsers,
   getUserPosts,
@@ -122,6 +123,17 @@ const getSuggestionsController = async (req, res, next) => {
   try {
     const suggestions = await getSuggestions(req.user.id);
     return success(res, 200, 'Friend suggestions fetched', suggestions);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getUnfollowedUsersController = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const result = await getUnfollowedUsersByTrustScore(req.user.id, page, limit);
+    return success(res, 200, 'Unfollowed users fetched', result);
   } catch (err) {
     next(err);
   }
@@ -334,6 +346,7 @@ module.exports = {
   getFollowingController,
   getFriendsController,
   getSuggestionsController,
+  getUnfollowedUsersController,
   getSavedPostsController,
   getSavedReelsController,
   getUserProfileController,

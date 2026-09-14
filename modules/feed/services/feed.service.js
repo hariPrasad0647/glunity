@@ -109,7 +109,7 @@ const getFeed = async (userId, { page = 1, limit = 20 } = {}) => {
       media: post.media.sort((a, b) => a.order - b.order).map((m) => m.mediaUrl),
       hashtags: post.hashtags.map((h) => h.name),
       mentions: post.mentions.map((m) => ({ id: m.mentionedUser.id, username: m.mentionedUser.username, profileImage: m.mentionedUser.profileImage || null })),
-      likeCount: post.likeCount, bookmarkCount: post.bookmarkCount, repostCount: post.repostCount, replyCount: post.replyCount,
+      likeCount: post.likeCount, bookmarkCount: post.bookmarkCount, repostCount: post.repostCount, replyCount: post.replyCount, viewCount: post.viewCount || 0,
       hasLiked: viewerLiked.has(post.id),
       hasBookmarked: viewerBookmarked.has(post.id),
       isFromFollowing: isFollowing,
@@ -131,7 +131,7 @@ const getFeed = async (userId, { page = 1, limit = 20 } = {}) => {
       author: { id: reel.author.id, username: reel.author.username, fullName: reel.author.fullName, profileImage: reel.author.profileImage || null },
       hashtags: reel.hashtags.map((h) => h.name),
       mentions: reel.mentions.map((m) => ({ id: m.mentionedUser.id, username: m.mentionedUser.username, profileImage: m.mentionedUser.profileImage || null })),
-      likeCount: 0, bookmarkCount: 0, repostCount: 0, replyCount: 0,
+      likeCount: 0, bookmarkCount: 0, repostCount: 0, replyCount: 0, viewCount: reel.viewCount || 0,
       hasLiked: viewerLiked.has(reel.id),
       hasBookmarked: viewerBookmarked.has(reel.id),
       isFromFollowing: isFollowing,
@@ -161,6 +161,7 @@ const formatFeedPost = (post, viewerLiked, viewerBookmarked) => ({
   bookmarkCount: post.bookmarkCount || 0,
   repostCount: post.repostCount || 0,
   replyCount: post.replyCount || 0,
+  viewCount: post.viewCount || 0,
   hasLiked: viewerLiked.has(post.id),
   hasBookmarked: viewerBookmarked.has(post.id),
 });
@@ -179,6 +180,7 @@ const formatFeedReel = (reel, viewerLiked, viewerBookmarked) => ({
   bookmarkCount: 0,
   repostCount: 0,
   replyCount: 0,
+  viewCount: reel.viewCount || 0,
   hasLiked: viewerLiked.has(reel.id),
   hasBookmarked: viewerBookmarked.has(reel.id),
 });

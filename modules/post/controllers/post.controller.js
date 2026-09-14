@@ -73,7 +73,7 @@ const repostPostController = async (req, res, next) => {
 
 const viewPostController = async (req, res, next) => {
   try {
-    const result = await recordView(req.params.id);
+    const result = await recordView(req.user.id, req.params.id);
     return success(res, 200, 'Post view recorded', result);
   } catch (err) {
     if (err.status) return error(res, err.status, err.message);

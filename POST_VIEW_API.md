@@ -2,6 +2,8 @@
 
 This document outlines the API endpoints to record views for posts and reels, similar to Twitter (X). The view counts are now included in the response payloads when you fetch a post, reel, or feed.
 
+*Note: Views are unique per user account. Hitting the endpoint multiple times for the same user and content will only increment the view count once.*
+
 ## 1. Record a Post View
 Call this endpoint when a post enters the user's viewport to record a view.
 
@@ -23,7 +25,8 @@ curl -X POST http://localhost:5000/api/posts/POST_ID_HERE/view \
   "success": true,
   "message": "Post view recorded",
   "data": {
-    "success": true
+    "success": true,
+    "unique": true // true if this was the user's first time viewing, false if they already viewed it
   }
 }
 ```
@@ -51,7 +54,8 @@ curl -X POST http://localhost:5000/api/reels/REEL_ID_HERE/view \
   "success": true,
   "message": "Reel view recorded",
   "data": {
-    "success": true
+    "success": true,
+    "unique": true // true if this was the user's first time viewing, false if they already viewed it
   }
 }
 ```

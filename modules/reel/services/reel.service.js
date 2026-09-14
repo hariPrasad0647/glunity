@@ -8,6 +8,7 @@ const Like = require('../../post/models/like.model');
 const Save = require('../../post/models/bookmark.model');
 const Repost = require('../../post/models/repost.model');
 const Reply = require('../../reply/models/reply.model');
+const View = require('../../post/models/view.model');
 
 const extractHashtags = (text) => {
   const matches = text.match(/#([a-zA-Z0-9_]+)/g) || [];
@@ -167,15 +168,23 @@ const getPublicReelsFeed = async (viewerId, { page = 1, limit = 10 } = {}) => {
   return { reels: formatted, total: count, page, limit, hasMore: offset + limit < count };
 };
 
-const recordView = async (reelId) => {
+const recordView = async (userId, reelId) => {
   const reel = await Reel.findByPk(reelId);
   if (!reel) {
     const error = new Error('Reel not found');
     error.status = 404;
     throw error;
   }
-  await reel.increment('viewCount', { by: 1 });
-  return { success: true };
+  
+  const [, created] = await View.findOrCreate({
+    where: { userId, contentType: 'reel', contentId: reelId },
+  });
+
+  if (created) {
+    await reel.increment('viewCount', { by: 1 });
+  }
+
+  return { success: true, unique: created };
 };
 
 module.exports = { createReel, getReelById, formatReel, getPublicReelsFeed, recordView };

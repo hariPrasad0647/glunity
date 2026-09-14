@@ -5,6 +5,7 @@ const PostMedia = require('../models/post_media.model');
 const Hashtag = require('../models/hashtag.model');
 const PostHashtag = require('../models/post_hashtag.model');
 const PostMention = require('../models/post_mention.model');
+const View = require('../models/view.model');
 const { awardQualityPost } = require('../../points/services/points.service');
 
 const extractHashtags = (text) => {
@@ -140,15 +141,23 @@ const deletePost = async (userId, postId) => {
   return { success: true };
 };
 
-const recordView = async (postId) => {
+const recordView = async (userId, postId) => {
   const post = await Post.findByPk(postId);
   if (!post) {
     const error = new Error('Post not found');
     error.status = 404;
     throw error;
   }
-  await post.increment('viewCount', { by: 1 });
-  return { success: true };
+  
+  const [, created] = await View.findOrCreate({
+    where: { userId, contentType: 'post', contentId: postId },
+  });
+
+  if (created) {
+    await post.increment('viewCount', { by: 1 });
+  }
+
+  return { success: true, unique: created };
 };
 
 module.exports = { createPost, getPostById, formatPost, deletePost, recordView };

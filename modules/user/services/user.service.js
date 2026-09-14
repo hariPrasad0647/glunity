@@ -342,6 +342,29 @@ const getSuggestions = async (userId, limit = 20) => {
         .map((u) => ({ ...u.toJSON(), mutualConnectionsCount: tofMap[u.id]?.size || 0 }))
         .sort((a, b) => b.mutualConnectionsCount - a.mutualConnectionsCount);
     }
+  // ── Fallback ───────────────────────────────────────────────────────────────
+  // If we don't have enough suggestions (e.g. cold start), add some recent users
+  const totalFound = firstDegree.length + secondDegree.length + thirdDegree.length;
+  if (totalFound < limit) {
+    const fallbackLimit = limit - totalFound;
+    const excludeIds = new Set([
+      ...allConnectedIds,
+      ...firstDegree.map((u) => u.id),
+      ...secondDegree.map((u) => u.id),
+      ...thirdDegree.map((u) => u.id)
+    ]);
+
+    const fallbackUsers = await User.findAll({
+      where: {
+        id: { [Op.notIn]: Array.from(excludeIds).length ? Array.from(excludeIds) : [SENTINEL] }
+      },
+      attributes: FOLLOWER_ATTRS,
+      limit: fallbackLimit,
+      order: [['createdAt', 'DESC']],
+    });
+
+    const fallbackFormatted = fallbackUsers.map((u) => ({ ...u.toJSON(), mutualConnectionsCount: 0 }));
+    thirdDegree.push(...fallbackFormatted);
   }
 
   return { firstDegree, secondDegree, thirdDegree };

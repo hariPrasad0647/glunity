@@ -79,25 +79,25 @@ exports.getDashboardStats = async (req, res, next) => {
 
     // 1. Total Users
     const [[totalUsersData]] = await sequelize.query('SELECT COUNT(*) as count FROM users');
-    const [[newUsersLast30Data]] = await sequelize.query('SELECT COUNT(*) as count FROM users WHERE createdAt > DATE_SUB(NOW(), INTERVAL 30 DAY)');
+    const [[newUsersLast30Data]] = await sequelize.query('SELECT COUNT(*) as count FROM users WHERE \`createdAt\` > DATE_SUB(NOW(), INTERVAL 30 DAY)');
     const totalUsers = totalUsersData.count;
     const totalUsersPrev = totalUsers - newUsersLast30Data.count;
 
     // 2. Active Users (updated within 30 days vs updated 30-60 days ago)
-    const [[activeUsersData]] = await sequelize.query(`SELECT COUNT(*) as count FROM users WHERE updatedAt > DATE_SUB(NOW(), INTERVAL 30 DAY)`);
-    const [[activeUsersPrevData]] = await sequelize.query(`SELECT COUNT(*) as count FROM users WHERE updatedAt > DATE_SUB(NOW(), INTERVAL 60 DAY) AND updatedAt <= DATE_SUB(NOW(), INTERVAL 30 DAY)`);
+    const [[activeUsersData]] = await sequelize.query(`SELECT COUNT(*) as count FROM users WHERE \`updatedAt\` > DATE_SUB(NOW(), INTERVAL 30 DAY)`);
+    const [[activeUsersPrevData]] = await sequelize.query(`SELECT COUNT(*) as count FROM users WHERE \`updatedAt\` > DATE_SUB(NOW(), INTERVAL 60 DAY) AND \`updatedAt\` <= DATE_SUB(NOW(), INTERVAL 30 DAY)`);
     const activeUsers = activeUsersData.count;
     const activeUsersPrev = activeUsersPrevData.count;
 
     // 3. Total Posts
     const [[totalPostsData]] = await sequelize.query('SELECT COUNT(*) as count FROM posts');
-    const [[newPostsLast30Data]] = await sequelize.query('SELECT COUNT(*) as count FROM posts WHERE createdAt > DATE_SUB(NOW(), INTERVAL 30 DAY)');
+    const [[newPostsLast30Data]] = await sequelize.query('SELECT COUNT(*) as count FROM posts WHERE \`createdAt\` > DATE_SUB(NOW(), INTERVAL 30 DAY)');
     const totalPosts = totalPostsData.count;
     const totalPostsPrev = totalPosts - newPostsLast30Data.count;
 
     // 4. Total Engagement (likes + views + reposts + replies)
     const getEngagement = async (intervalStart, intervalEnd) => {
-      let queryExt = intervalEnd ? `WHERE createdAt > DATE_SUB(NOW(), INTERVAL ${intervalStart} DAY) AND createdAt <= DATE_SUB(NOW(), INTERVAL ${intervalEnd} DAY)` : (intervalStart ? `WHERE createdAt > DATE_SUB(NOW(), INTERVAL ${intervalStart} DAY)` : '');
+      let queryExt = intervalEnd ? `WHERE \`createdAt\` > DATE_SUB(NOW(), INTERVAL ${intervalStart} DAY) AND \`createdAt\` <= DATE_SUB(NOW(), INTERVAL ${intervalEnd} DAY)` : (intervalStart ? `WHERE \`createdAt\` > DATE_SUB(NOW(), INTERVAL ${intervalStart} DAY)` : '');
       const [[likes]] = await sequelize.query(`SELECT COUNT(*) as count FROM likes ${queryExt}`);
       const [[views]] = await sequelize.query(`SELECT COUNT(*) as count FROM views ${queryExt}`);
       const [[reposts]] = await sequelize.query(`SELECT COUNT(*) as count FROM reposts ${queryExt}`);
@@ -111,34 +111,34 @@ exports.getDashboardStats = async (req, res, next) => {
 
     // 5. Chat Messages
     const [[chatMessagesData]] = await sequelize.query('SELECT COUNT(*) as count FROM messages');
-    const [[newMessagesLast30Data]] = await sequelize.query('SELECT COUNT(*) as count FROM messages WHERE createdAt > DATE_SUB(NOW(), INTERVAL 30 DAY)');
+    const [[newMessagesLast30Data]] = await sequelize.query('SELECT COUNT(*) as count FROM messages WHERE \`createdAt\` > DATE_SUB(NOW(), INTERVAL 30 DAY)');
     const chatMessages = chatMessagesData.count;
     const chatMessagesPrev = chatMessages - newMessagesLast30Data.count;
 
     // 6. Points Distributed
     const [[pointsData]] = await sequelize.query(`SELECT SUM(points) as total FROM point_transactions WHERE points > 0`);
-    const [[pointsLast30Data]] = await sequelize.query(`SELECT SUM(points) as total FROM point_transactions WHERE points > 0 AND createdAt > DATE_SUB(NOW(), INTERVAL 30 DAY)`);
+    const [[pointsLast30Data]] = await sequelize.query(`SELECT SUM(points) as total FROM point_transactions WHERE points > 0 AND \`createdAt\` > DATE_SUB(NOW(), INTERVAL 30 DAY)`);
     const pointsDistributed = pointsData.total || 0;
     const pointsDistributedPrev = pointsDistributed - (pointsLast30Data.total || 0);
 
     // 7. Reposts
     const [[repostsData]] = await sequelize.query('SELECT COUNT(*) as count FROM reposts');
-    const [[newRepostsLast30Data]] = await sequelize.query('SELECT COUNT(*) as count FROM reposts WHERE createdAt > DATE_SUB(NOW(), INTERVAL 30 DAY)');
+    const [[newRepostsLast30Data]] = await sequelize.query('SELECT COUNT(*) as count FROM reposts WHERE \`createdAt\` > DATE_SUB(NOW(), INTERVAL 30 DAY)');
     const reposts = repostsData.count;
     const repostsPrev = reposts - newRepostsLast30Data.count;
 
     // 8. User Growth (7 Days)
     const [userGrowthData] = await sequelize.query(`
-      SELECT DATE(createdAt) as date, COUNT(*) as count 
+      SELECT DATE(\`createdAt\`) as date, COUNT(*) as count 
       FROM users 
-      WHERE createdAt >= DATE_SUB(NOW(), INTERVAL 7 DAY) 
-      GROUP BY DATE(createdAt) 
+      WHERE \`createdAt\` >= DATE_SUB(NOW(), INTERVAL 7 DAY) 
+      GROUP BY DATE(\`createdAt\`) 
       ORDER BY date ASC
     `);
 
     // 9. User Activity Distribution
-    const [[inactiveUsersData]] = await sequelize.query(`SELECT COUNT(*) as count FROM users WHERE updatedAt <= DATE_SUB(NOW(), INTERVAL 30 DAY)`);
-    const [[returningUsersData]] = await sequelize.query(`SELECT COUNT(*) as count FROM users WHERE updatedAt > DATE_SUB(NOW(), INTERVAL 30 DAY) AND createdAt <= DATE_SUB(NOW(), INTERVAL 30 DAY)`);
+    const [[inactiveUsersData]] = await sequelize.query(`SELECT COUNT(*) as count FROM users WHERE \`updatedAt\` <= DATE_SUB(NOW(), INTERVAL 30 DAY)`);
+    const [[returningUsersData]] = await sequelize.query(`SELECT COUNT(*) as count FROM users WHERE \`updatedAt\` > DATE_SUB(NOW(), INTERVAL 30 DAY) AND \`createdAt\` <= DATE_SUB(NOW(), INTERVAL 30 DAY)`);
     
     const userActivity = {
       inactive: inactiveUsersData.count,
@@ -153,11 +153,11 @@ exports.getDashboardStats = async (req, res, next) => {
         u.username, 
         u.fullName as name, 
         u.profileImage as avatar, 
-        COALESCE(ts.finalScore, 0) as trustScore, 
-        COALESCE((SELECT SUM(points) FROM point_transactions pt WHERE pt.userId = u.id AND pt.points > 0), 0) as points, 
-        COALESCE((SELECT COUNT(*) FROM posts p WHERE p.userId = u.id), 0) as posts 
+        COALESCE(ts.\`finalScore\`, 0) as trustScore, 
+        COALESCE((SELECT SUM(points) FROM point_transactions pt WHERE pt.\`userId\` = u.id AND pt.points > 0), 0) as points, 
+        COALESCE((SELECT COUNT(*) FROM posts p WHERE p.\`userId\` = u.id), 0) as posts 
       FROM users u 
-      LEFT JOIN trust_scores ts ON ts.userId = u.id 
+      LEFT JOIN trust_scores ts ON ts.\`userId\` = u.id 
       ORDER BY points DESC 
       LIMIT 5
     `);
@@ -232,13 +232,13 @@ exports.getAllUsers = async (req, res, next) => {
         u.fullName,
         u.email,
         u.profileImage as avatar, 
-        u.createdAt as joined,
-        COALESCE(ts.finalScore, 0) as trustScore, 
-        COALESCE((SELECT SUM(points) FROM point_transactions pt WHERE pt.userId = u.id AND pt.points > 0), 0) as points
+        u.\`createdAt\` as joined,
+        COALESCE(ts.\`finalScore\`, 0) as trustScore, 
+        COALESCE((SELECT SUM(points) FROM point_transactions pt WHERE pt.\`userId\` = u.id AND pt.points > 0), 0) as points
       FROM users u 
-      LEFT JOIN trust_scores ts ON ts.userId = u.id 
+      LEFT JOIN trust_scores ts ON ts.\`userId\` = u.id 
       ${searchCondition}
-      ORDER BY u.createdAt DESC 
+      ORDER BY u.\`createdAt\` DESC 
       LIMIT ? OFFSET ?
     `;
 
@@ -276,12 +276,12 @@ exports.getUserDetails = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const [[postsData]] = await sequelize.query('SELECT COUNT(*) as count FROM posts WHERE userId = ?', { replacements: [id] });
-    const [[repostsData]] = await sequelize.query('SELECT COUNT(*) as count FROM reposts WHERE userId = ?', { replacements: [id] });
-    const [[followersData]] = await sequelize.query(`SELECT COUNT(*) as count FROM follows WHERE followingId = ? AND status = 'accepted'`, { replacements: [id] });
-    const [[followingData]] = await sequelize.query(`SELECT COUNT(*) as count FROM follows WHERE followerId = ? AND status = 'accepted'`, { replacements: [id] });
-    const [[trustScoreData]] = await sequelize.query('SELECT finalScore FROM trust_scores WHERE userId = ?', { replacements: [id] });
-    const [[pointsData]] = await sequelize.query('SELECT SUM(points) as total FROM point_transactions WHERE userId = ? AND points > 0', { replacements: [id] });
+    const [[postsData]] = await sequelize.query('SELECT COUNT(*) as count FROM posts WHERE \`userId\` = ?', { replacements: [id] });
+    const [[repostsData]] = await sequelize.query('SELECT COUNT(*) as count FROM reposts WHERE \`userId\` = ?', { replacements: [id] });
+    const [[followersData]] = await sequelize.query(`SELECT COUNT(*) as count FROM follows WHERE \`followingId\` = ? AND status = 'accepted'`, { replacements: [id] });
+    const [[followingData]] = await sequelize.query(`SELECT COUNT(*) as count FROM follows WHERE \`followerId\` = ? AND status = 'accepted'`, { replacements: [id] });
+    const [[trustScoreData]] = await sequelize.query('SELECT \`finalScore\` FROM trust_scores WHERE \`userId\` = ?', { replacements: [id] });
+    const [[pointsData]] = await sequelize.query('SELECT SUM(points) as total FROM point_transactions WHERE \`userId\` = ? AND points > 0', { replacements: [id] });
 
     res.json({
       success: true,

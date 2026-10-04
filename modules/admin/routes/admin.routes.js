@@ -12,6 +12,12 @@ router.use(adminAuth);
 
 router.get('/dashboard', adminController.getDashboardStats);
 router.get('/dashboard/user-growth', adminController.getUserGrowthChart);
+
+// Analytics Routes
+router.get('/analytics/user-growth', adminController.getUserGrowthAnalytics);
+router.get('/analytics/engagement', adminController.getEngagementAnalytics);
+router.get('/analytics/retention', adminController.getRetentionAnalytics);
+
 router.get('/users', adminController.getAllUsers);
 router.get('/users/:id', adminController.getUserDetails);
 router.get('/users/:id/followers', adminController.getUserFollowers);

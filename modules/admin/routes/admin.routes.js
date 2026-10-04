@@ -13,5 +13,8 @@ router.use(adminAuth);
 router.get('/dashboard', adminController.getDashboardStats);
 router.get('/users', adminController.getAllUsers);
 router.get('/users/:id', adminController.getUserDetails);
+router.get('/users/:id/followers', adminController.getUserFollowers);
+router.get('/users/:id/following', adminController.getUserFollowing);
+router.get('/users/:id/posts', adminController.getUserPosts);
 
 module.exports = router;

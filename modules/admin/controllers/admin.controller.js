@@ -264,8 +264,8 @@ exports.getUserDetails = async (req, res, next) => {
 
     const [[postsData]] = await sequelize.query('SELECT COUNT(*) as count FROM posts WHERE `userId` = ?', { replacements: [userId] });
     const [[repostsData]] = await sequelize.query('SELECT COUNT(*) as count FROM reposts WHERE `userId` = ?', { replacements: [userId] });
-    const [[followersData]] = await sequelize.query('SELECT COUNT(*) as count FROM follows WHERE `followingId` = ? AND status = ?', { replacements: [userId, 'accepted'] });
-    const [[followingData]] = await sequelize.query('SELECT COUNT(*) as count FROM follows WHERE `followerId` = ? AND status = ?', { replacements: [userId, 'accepted'] });
+    const [[followersData]] = await sequelize.query('SELECT COUNT(*) as count FROM follows WHERE `followingId` = ? ', { replacements: [userId] });
+    const [[followingData]] = await sequelize.query('SELECT COUNT(*) as count FROM follows WHERE `followerId` = ? ', { replacements: [userId] });
     const [[trustScoreData]] = await sequelize.query('SELECT `finalScore` FROM trust_scores WHERE `userId` = ?', { replacements: [userId] });
     const [[pointsData]] = await sequelize.query('SELECT SUM(points) as total FROM point_transactions WHERE `userId` = ? AND points > 0', { replacements: [userId] });
 
@@ -296,6 +296,125 @@ exports.getUserDetails = async (req, res, next) => {
 
   } catch (error) {
     console.error('Error fetching user details:', error);
+    next(error);
+  }
+};
+
+exports.getUserFollowers = async (req, res, next) => {
+  try {
+    var userId = req.params.id;
+    var page = parseInt(req.query.page) || 1;
+    var limit = parseInt(req.query.limit) || 10;
+    var offset = (page - 1) * limit;
+
+    const [[countResult]] = await sequelize.query(
+      "SELECT COUNT(*) as count FROM follows WHERE `followingId` = ? ",
+      { replacements: [userId] }
+    );
+    const total = countResult.count;
+
+    const dataQuery = "SELECT u.id, u.username, u.`fullName`, u.`profileImage` as avatar, f.`createdAt` as followedAt FROM follows f JOIN users u ON u.id = f.`followerId` WHERE f.`followingId` = ?  ORDER BY f.`createdAt` DESC LIMIT ? OFFSET ?";
+    
+    const [followers] = await sequelize.query(dataQuery, {
+      replacements: [userId, limit, offset]
+    });
+
+    res.json({
+      success: true,
+      data: {
+        followers,
+        pagination: {
+          total: total,
+          page: page,
+          limit: limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getUserFollowing = async (req, res, next) => {
+  try {
+    var userId = req.params.id;
+    var page = parseInt(req.query.page) || 1;
+    var limit = parseInt(req.query.limit) || 10;
+    var offset = (page - 1) * limit;
+
+    const [[countResult]] = await sequelize.query(
+      "SELECT COUNT(*) as count FROM follows WHERE `followerId` = ? ",
+      { replacements: [userId] }
+    );
+    const total = countResult.count;
+
+    const dataQuery = "SELECT u.id, u.username, u.`fullName`, u.`profileImage` as avatar, f.`createdAt` as followedAt FROM follows f JOIN users u ON u.id = f.`followingId` WHERE f.`followerId` = ?  ORDER BY f.`createdAt` DESC LIMIT ? OFFSET ?";
+    
+    const [following] = await sequelize.query(dataQuery, {
+      replacements: [userId, limit, offset]
+    });
+
+    res.json({
+      success: true,
+      data: {
+        following,
+        pagination: {
+          total: total,
+          page: page,
+          limit: limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getUserPosts = async (req, res, next) => {
+  try {
+    var userId = req.params.id;
+    var page = parseInt(req.query.page) || 1;
+    var limit = parseInt(req.query.limit) || 10;
+    var offset = (page - 1) * limit;
+
+    const [[countResult]] = await sequelize.query(
+      "SELECT COUNT(*) as count FROM posts WHERE `userId` = ?",
+      { replacements: [userId] }
+    );
+    const total = countResult.count;
+
+    const [posts] = await sequelize.query(
+      "SELECT id, caption, `isPrivate`, `createdAt` FROM posts WHERE `userId` = ? ORDER BY `createdAt` DESC LIMIT ? OFFSET ?",
+      { replacements: [userId, limit, offset] }
+    );
+
+    if (posts.length > 0) {
+      const postIds = posts.map(p => p.id);
+      const [media] = await sequelize.query(
+        "SELECT `postId`, `mediaUrl`, `order` FROM post_media WHERE `postId` IN (?) ORDER BY `order` ASC",
+        { replacements: [postIds] }
+      );
+      
+      posts.forEach(post => {
+        post.media = media.filter(m => m.postId === post.id).map(m => m.mediaUrl);
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        posts,
+        pagination: {
+          total: total,
+          page: page,
+          limit: limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      }
+    });
+  } catch (error) {
     next(error);
   }
 };

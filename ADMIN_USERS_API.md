@@ -126,6 +126,10 @@ curl -X GET "https://glunity.onrender.com/api/admin/users/e434f8a3-.../posts?pag
       {
         "id": "post-uuid-1",
         "content": "Enjoying the sunset! #vibes",
+        "likes": 142,
+        "comments": 24,
+        "reach": 1530,
+        "reposts": 5,
         "createdAt": "2023-10-01T15:30:00Z",
         "media": [
           "https://example.com/uploads/image1.jpg",

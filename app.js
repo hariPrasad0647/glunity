@@ -24,10 +24,12 @@ const adminRoutes = require('./modules/admin/routes/admin.routes');
 
 const app = express();
 
-const allowedOrigins = [
-  'https://happychats.in',
-  'https://www.happychats.in',
-];
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : [
+      'https://happychats.in',
+      'https://www.happychats.in',
+    ];
 
 app.use(helmet());
 app.use(cors({

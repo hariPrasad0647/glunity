@@ -99,19 +99,23 @@ exports.getDashboardStats = async (req, res, next) => {
     const totalPosts = totalPostsData.count;
     const totalPostsPrev = totalPosts - newPostsLast30Data.count;
 
-    // 4. Total Engagement (likes + views + reposts + replies)
+    // 4. Total Engagement
+    // NOTE: likes and views tables have NO timestamps (timestamps: false in model)
+    // So we can only do date filtering on reposts and replies
     const [[likesAll]] = await sequelize.query('SELECT COUNT(*) as count FROM likes');
     const [[viewsAll]] = await sequelize.query('SELECT COUNT(*) as count FROM views');
     const [[repostsAll]] = await sequelize.query('SELECT COUNT(*) as count FROM reposts');
     const [[repliesAll]] = await sequelize.query('SELECT COUNT(*) as count FROM replies');
     const totalEngagement = likesAll.count + viewsAll.count + repostsAll.count + repliesAll.count;
 
-    const [[likes30]] = await sequelize.query('SELECT COUNT(*) as count FROM likes WHERE `createdAt` > DATE_SUB(NOW(), INTERVAL 30 DAY)');
-    const [[views30]] = await sequelize.query('SELECT COUNT(*) as count FROM views WHERE `createdAt` > DATE_SUB(NOW(), INTERVAL 30 DAY)');
+    // For percentage: only reposts and replies have createdAt
     const [[reposts30]] = await sequelize.query('SELECT COUNT(*) as count FROM reposts WHERE `createdAt` > DATE_SUB(NOW(), INTERVAL 30 DAY)');
     const [[replies30]] = await sequelize.query('SELECT COUNT(*) as count FROM replies WHERE `createdAt` > DATE_SUB(NOW(), INTERVAL 30 DAY)');
-    const engagementLast30 = likes30.count + views30.count + reposts30.count + replies30.count;
-    const totalEngagementPrev = totalEngagement - engagementLast30;
+    const engagementLast30 = reposts30.count + replies30.count;
+    // Use only reposts+replies for delta since likes/views have no date info
+    const repostsRepliesTotal = repostsAll.count + repliesAll.count;
+    const totalEngagementPrev = repostsRepliesTotal > 0 ? repostsRepliesTotal - engagementLast30 : 0;
+    const engagementPercentage = totalEngagementPrev > 0 ? calcPercentage(repostsRepliesTotal, totalEngagementPrev) : 0;
 
     // 5. Chat Messages
     const [[chatMessagesData]] = await sequelize.query('SELECT COUNT(*) as count FROM messages');
@@ -129,7 +133,7 @@ exports.getDashboardStats = async (req, res, next) => {
     const pointsDistributed = pointsData.total || 0;
     const pointsDistributedPrev = pointsDistributed - (pointsLast30Data.total || 0);
 
-    // 7. Reposts
+    // 7. Reposts (has createdAt)
     const reposts = repostsAll.count;
     const [[newRepostsLast30Data]] = await sequelize.query(
       'SELECT COUNT(*) as count FROM reposts WHERE `createdAt` > DATE_SUB(NOW(), INTERVAL 30 DAY)'
@@ -178,7 +182,7 @@ exports.getDashboardStats = async (req, res, next) => {
           },
           totalEngagement: {
             value: totalEngagement,
-            percentageChange: calcPercentage(totalEngagement, totalEngagementPrev)
+            percentageChange: engagementPercentage
           },
           chatMessages: {
             value: chatMessages,

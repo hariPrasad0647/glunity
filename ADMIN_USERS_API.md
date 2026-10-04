@@ -101,7 +101,7 @@ curl -X GET "https://glunity.onrender.com/api/admin/users/e434f8a3-..." \
 
 ## 3. Get User Posts
 
-Retrieves a paginated list of posts created by a specific user, including their captions and media URLs (images/videos).
+Retrieves a paginated list of posts created by a specific user, including their content and media URLs (images/videos).
 
 **Endpoint:** `GET /api/admin/users/:id/posts`
 **Authentication:** Required
@@ -125,8 +125,7 @@ curl -X GET "https://glunity.onrender.com/api/admin/users/e434f8a3-.../posts?pag
     "posts": [
       {
         "id": "post-uuid-1",
-        "caption": "Enjoying the sunset! #vibes",
-        "isPrivate": 0,
+        "content": "Enjoying the sunset! #vibes",
         "createdAt": "2023-10-01T15:30:00Z",
         "media": [
           "https://example.com/uploads/image1.jpg",

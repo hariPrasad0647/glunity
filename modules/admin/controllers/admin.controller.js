@@ -140,10 +140,25 @@ exports.getDashboardStats = async (req, res, next) => {
     );
     const repostsPrev = reposts - newRepostsLast30Data.count;
 
-    // 8. User Growth (7 Days)
-    const [userGrowthData] = await sequelize.query(
-      'SELECT DATE(`createdAt`) as date, COUNT(*) as count FROM users WHERE `createdAt` >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY DATE(`createdAt`) ORDER BY date ASC'
-    );
+    // 8. User Growth (Dynamic Time Range)
+    let userGrowthQuery = '';
+    let growthReplacements = [];
+    const timeRange = req.query.timeRange || '7d';
+    
+    if (req.query.startDate && req.query.endDate) {
+      userGrowthQuery = 'SELECT DATE(`createdAt`) as date, COUNT(*) as count FROM users WHERE `createdAt` BETWEEN ? AND ? GROUP BY DATE(`createdAt`) ORDER BY date ASC';
+      growthReplacements = [req.query.startDate, req.query.endDate];
+    } else {
+      let interval = '7 DAY';
+      if (timeRange === '1m') interval = '1 MONTH';
+      else if (timeRange === '3m') interval = '3 MONTH';
+      else if (timeRange === '8m') interval = '8 MONTH';
+      else if (timeRange === '1y') interval = '1 YEAR';
+      
+      userGrowthQuery = `SELECT DATE(\`createdAt\`) as date, COUNT(*) as count FROM users WHERE \`createdAt\` >= DATE_SUB(NOW(), INTERVAL ${interval}) GROUP BY DATE(\`createdAt\`) ORDER BY date ASC`;
+    }
+
+    const [userGrowthData] = await sequelize.query(userGrowthQuery, { replacements: growthReplacements });
 
     // 9. User Activity Distribution
     const [[inactiveUsersData]] = await sequelize.query(

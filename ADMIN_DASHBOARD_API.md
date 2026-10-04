@@ -56,9 +56,13 @@ Retrieves all the necessary aggregated data for the admin dashboard, including s
 **Endpoint:** `GET /api/admin/dashboard`
 **Authentication:** Required (You should pass the admin token in the headers if this route is protected)
 
+### Query Parameters
+- `timeRange` (optional): Filter the "User Growth" data array by preset ranges. Values: `7d` (default), `1m`, `3m`, `8m`, `1y`.
+- `startDate` & `endDate` (optional): Filter "User Growth" by a custom date range (e.g. `startDate=2023-01-01&endDate=2023-12-31`). If provided, this overrides `timeRange`.
+
 ### cURL Request
 ```bash
-curl -X GET https://glunity.onrender.com/api/admin/dashboard \
+curl -X GET "https://glunity.onrender.com/api/admin/dashboard?timeRange=1m" \
   -H "Authorization: Bearer <YOUR_ADMIN_TOKEN>" \
   -H "Content-Type: application/json"
 ```

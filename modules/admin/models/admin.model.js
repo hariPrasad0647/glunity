@@ -17,7 +17,6 @@ const Admin = sequelize.define(
     email: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
       validate: {
         isEmail: true,
       },
@@ -30,6 +29,12 @@ const Admin = sequelize.define(
   {
     tableName: 'admins',
     timestamps: true,
+    indexes: [
+      {
+        unique: true,
+        fields: ['email'],
+      },
+    ],
   }
 );
 

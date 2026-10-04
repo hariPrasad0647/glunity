@@ -386,7 +386,7 @@ exports.getUserPosts = async (req, res, next) => {
     const total = countResult.count;
 
     const [posts] = await sequelize.query(
-      "SELECT id, caption, `isPrivate`, `createdAt` FROM posts WHERE `userId` = ? ORDER BY `createdAt` DESC LIMIT ? OFFSET ?",
+      "SELECT id, content, `createdAt` FROM posts WHERE `userId` = ? ORDER BY `createdAt` DESC LIMIT ? OFFSET ?",
       { replacements: [userId, limit, offset] }
     );
 

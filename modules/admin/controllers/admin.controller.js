@@ -206,3 +206,110 @@ exports.getDashboardStats = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getAllUsers = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || '';
+
+    let searchCondition = '';
+    let replacements = [];
+    if (search) {
+      searchCondition = 'WHERE u.username LIKE ? OR u.fullName LIKE ? OR u.email LIKE ?';
+      replacements = [`%${search}%`, `%${search}%`, `%${search}%`];
+    }
+
+    const countQuery = `SELECT COUNT(*) as count FROM users u ${searchCondition}`;
+    const [[countResult]] = await sequelize.query(countQuery, { replacements });
+    const totalUsers = countResult.count;
+
+    const dataQuery = `
+      SELECT 
+        u.id, 
+        u.username, 
+        u.fullName,
+        u.email,
+        u.profileImage as avatar, 
+        u.createdAt as joined,
+        COALESCE(ts.finalScore, 0) as trustScore, 
+        COALESCE((SELECT SUM(points) FROM point_transactions pt WHERE pt.userId = u.id AND pt.points > 0), 0) as points
+      FROM users u 
+      LEFT JOIN trust_scores ts ON ts.userId = u.id 
+      ${searchCondition}
+      ORDER BY u.createdAt DESC 
+      LIMIT ? OFFSET ?
+    `;
+
+    const [users] = await sequelize.query(dataQuery, { 
+      replacements: [...replacements, limit, offset] 
+    });
+
+    res.json({
+      success: true,
+      data: {
+        users: users.map(user => ({
+          ...user,
+          status: 'Active' // Hardcoded for now since there's no banned/suspended column in DB schema
+        })),
+        pagination: {
+          total: totalUsers,
+          page,
+          limit,
+          totalPages: Math.ceil(totalUsers / limit)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    next(error);
+  }
+};
+
+exports.getUserDetails = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const [[user]] = await sequelize.query('SELECT * FROM users WHERE id = ?', { replacements: [id] });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const [[postsData]] = await sequelize.query('SELECT COUNT(*) as count FROM posts WHERE userId = ?', { replacements: [id] });
+    const [[repostsData]] = await sequelize.query('SELECT COUNT(*) as count FROM reposts WHERE userId = ?', { replacements: [id] });
+    const [[followersData]] = await sequelize.query(`SELECT COUNT(*) as count FROM follows WHERE followingId = ? AND status = 'accepted'`, { replacements: [id] });
+    const [[followingData]] = await sequelize.query(`SELECT COUNT(*) as count FROM follows WHERE followerId = ? AND status = 'accepted'`, { replacements: [id] });
+    const [[trustScoreData]] = await sequelize.query('SELECT finalScore FROM trust_scores WHERE userId = ?', { replacements: [id] });
+    const [[pointsData]] = await sequelize.query('SELECT SUM(points) as total FROM point_transactions WHERE userId = ? AND points > 0', { replacements: [id] });
+
+    res.json({
+      success: true,
+      data: {
+        profile: {
+          id: user.id,
+          username: user.username,
+          fullName: user.fullName,
+          email: user.email,
+          bio: user.bio,
+          profileImage: user.profileImage,
+          bannerImage: user.bannerImage,
+          joined: user.createdAt,
+          profession: user.profession
+        },
+        stats: {
+          posts: postsData.count,
+          reposts: repostsData.count,
+          followers: followersData.count,
+          following: followingData.count,
+          trustScore: trustScoreData ? trustScoreData.finalScore : 0,
+          points: pointsData.total || 0,
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    next(error);
+  }
+};

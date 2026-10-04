@@ -11,5 +11,7 @@ router.post('/login', adminController.loginAdmin);
 router.use(adminAuth);
 
 router.get('/dashboard', adminController.getDashboardStats);
+router.get('/users', adminController.getAllUsers);
+router.get('/users/:id', adminController.getUserDetails);
 
 module.exports = router;

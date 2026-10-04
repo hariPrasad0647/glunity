@@ -33,6 +33,9 @@ require('./modules/trust-score/models/trust-score-history.model');
 // Notification models
 require('./modules/notification/models/notification.model');
 
+// Admin models
+require('./modules/admin/models/admin.model');
+
 const { initTrustScoreScheduler } = require('./modules/trust-score/cron/trust-score.cron');
 
 const PORT = process.env.PORT || 5000;
